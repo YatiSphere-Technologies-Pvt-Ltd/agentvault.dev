@@ -1,5 +1,6 @@
 import { Sora, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "./auth/AuthProvider";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -23,7 +24,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${sora.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sora antialiased bg-hero-bg min-h-screen">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

@@ -1,54 +1,198 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------
+   AgentVault theme — expressed in Shadcn's token system.
+   Warm parchment background, muted enterprise indigo primary,
+   calm teal accent, white cards. Every color lives in :root / .dark
+   so Shadcn primitives inherit the brand automatically.
+--------------------------------------------------------------- */
 :root {
-  --background: 36 20% 97%;
-  --foreground: 222 28% 14%;
-  --primary: 232 45% 38%;
-  --primary-foreground: 36 30% 98%;
-  --secondary: 36 15% 92%;
-  --secondary-foreground: 222 28% 14%;
-  --muted: 36 18% 94%;
-  --muted-foreground: 222 12% 42%;
-  --accent: 195 55% 40%;
-  --accent-foreground: 36 30% 98%;
-  --destructive: 0 60% 48%;
-  --border: 30 12% 86%;
-  --input: 30 12% 86%;
-  --ring: 232 45% 38%;
+  /* Base surfaces */
+  --background:         oklch(0.965 0.011 85);   /* warm parchment */
+  --foreground:         oklch(0.22 0.04 260);    /* deep slate ink */
+  --card:               oklch(1 0 0);            /* pure white panel */
+  --card-foreground:    oklch(0.22 0.04 260);
+  --popover:            oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.04 260);
+
+  /* Brand primary — muted enterprise indigo */
+  --primary:            oklch(0.42 0.12 270);
+  --primary-foreground: oklch(0.98 0.006 85);
+
+  /* Secondary / muted — subtle parchment */
+  --secondary:          oklch(0.94 0.013 85);
+  --secondary-foreground: oklch(0.22 0.04 260);
+  --muted:              oklch(0.94 0.013 85);
+  --muted-foreground:   oklch(0.50 0.025 260);
+
+  /* Accent — shadcn uses this as a subtle hover state */
+  --accent:             oklch(0.94 0.013 85);
+  --accent-foreground:  oklch(0.22 0.04 260);
+
+  /* Destructive — calm red, not alarm */
+  --destructive:        oklch(0.55 0.21 25);
+  --destructive-foreground: oklch(0.98 0.006 85);
+
+  /* Borders, inputs, focus rings */
+  --border:             oklch(0.88 0.008 70);
+  --input:              oklch(0.88 0.008 70);
+  --ring:               oklch(0.42 0.12 270);
+
+  /* Charts — indigo / teal / amber / emerald / violet */
+  --chart-1:            oklch(0.52 0.14 270);   /* indigo */
+  --chart-2:            oklch(0.58 0.10 210);   /* teal (brand accent) */
+  --chart-3:            oklch(0.70 0.15 80);    /* amber */
+  --chart-4:            oklch(0.68 0.14 160);   /* emerald */
+  --chart-5:            oklch(0.55 0.18 320);   /* violet */
+
+  /* Sidebar — white panel with subtle muted tint on hover */
+  --sidebar:                    oklch(1 0 0);
+  --sidebar-foreground:         oklch(0.22 0.04 260);
+  --sidebar-primary:            oklch(0.42 0.12 270);
+  --sidebar-primary-foreground: oklch(0.98 0.006 85);
+  --sidebar-accent:             oklch(0.94 0.013 85);
+  --sidebar-accent-foreground:  oklch(0.22 0.04 260);
+  --sidebar-border:             oklch(0.88 0.008 70);
+  --sidebar-ring:               oklch(0.42 0.12 270);
+
   --radius: 0.5rem;
-  --nav-button: 36 20% 97%;
-  --hero-bg: 36 22% 96%;
-  --panel: 0 0% 100%;
-  --accent-rgb: 62, 87, 152;
+
+  /* ----------------------------------------------------------------
+     AgentVault brand extensions — for places where Shadcn's token
+     vocabulary falls short. Use sparingly; prefer shadcn tokens.
+  ---------------------------------------------------------------- */
+  --brand-teal:         oklch(0.58 0.10 210);   /* the teal that reads as "accent" */
+  --brand-hero-bg:      oklch(0.965 0.011 85);  /* page gutter / landing hero bg */
+  --brand-panel:        oklch(1 0 0);           /* pure white card surface */
+  --brand-panel-2:      oklch(0.965 0.011 85);  /* nested panel (one step deeper) */
+
+  /* Canvas / JS consumers — HSL triplets that mirror the oklch() tokens.
+     Needed because SceneCanvas parses H-S-L numerically for rendering.
+     Keep these in sync with the oklch() values above. */
+  --hsl-primary:     232 45% 38%;
+  --hsl-foreground:  222 28% 14%;
+  --hsl-hero-bg:     36 22% 96%;
+  --hsl-brand-teal:  195 55% 40%;
+  --accent-rgb:      62, 87, 152;
+}
+
+/* Dark mode — placeholder; AgentVault currently ships light only.
+   The Studio opts into a scoped dark theme via .studio-root. */
+.dark {
+  --background:         oklch(0.16 0.025 260);
+  --foreground:         oklch(0.94 0.008 85);
+  --card:               oklch(0.21 0.025 260);
+  --card-foreground:    oklch(0.94 0.008 85);
+  --popover:            oklch(0.21 0.025 260);
+  --popover-foreground: oklch(0.94 0.008 85);
+
+  --primary:            oklch(0.72 0.13 240);
+  --primary-foreground: oklch(0.16 0.025 260);
+  --secondary:          oklch(0.26 0.025 260);
+  --secondary-foreground: oklch(0.94 0.008 85);
+  --muted:              oklch(0.24 0.025 260);
+  --muted-foreground:   oklch(0.66 0.018 260);
+  --accent:             oklch(0.26 0.025 260);
+  --accent-foreground:  oklch(0.94 0.008 85);
+  --destructive:        oklch(0.62 0.21 25);
+  --destructive-foreground: oklch(0.16 0.025 260);
+
+  --border:             oklch(0.30 0.02 260);
+  --input:              oklch(0.30 0.02 260);
+  --ring:               oklch(0.72 0.13 240);
+
+  --chart-1:            oklch(0.68 0.14 270);
+  --chart-2:            oklch(0.68 0.12 210);
+  --chart-3:            oklch(0.74 0.14 80);
+  --chart-4:            oklch(0.74 0.14 160);
+  --chart-5:            oklch(0.64 0.18 320);
+
+  --sidebar:                    oklch(0.21 0.025 260);
+  --sidebar-foreground:         oklch(0.94 0.008 85);
+  --sidebar-primary:            oklch(0.72 0.13 240);
+  --sidebar-primary-foreground: oklch(0.16 0.025 260);
+  --sidebar-accent:             oklch(0.26 0.025 260);
+  --sidebar-accent-foreground:  oklch(0.94 0.008 85);
+  --sidebar-border:             oklch(0.30 0.02 260);
+  --sidebar-ring:               oklch(0.72 0.13 240);
+
+  --brand-teal:         oklch(0.68 0.12 210);
+  --brand-hero-bg:      oklch(0.16 0.025 260);
+  --brand-panel:        oklch(0.21 0.025 260);
+  --brand-panel-2:      oklch(0.26 0.025 260);
 }
 
 @theme inline {
+  --font-sans: var(--font-sora);
+  --font-heading: var(--font-sora);
   --font-sora: 'Sora', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-nav-button: hsl(var(--nav-button));
-  --color-hero-bg: hsl(var(--hero-bg));
-  --color-panel: hsl(var(--panel));
+  /* Shadcn token exposure */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
+  /* AgentVault brand extensions — utilities for spots where shadcn
+     tokens don't fit semantically. */
+  --color-hero-bg: var(--brand-hero-bg);
+  --color-panel: var(--brand-panel);
+  --color-panel2: var(--brand-panel-2);
+  --color-brand-teal: var(--brand-teal);
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Animations (existing) */
   --animate-fade-up: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-fade-in: fade-in 0.5s ease-out forwards;
   --animate-pulse-dot: pulse-dot 2.2s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 1.6s ease-out infinite;
   --animate-ticker: ticker 60s linear infinite;
   --animate-scan: scan 8s linear infinite;
+  --animate-dash: dash 0.7s linear infinite;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-spin-slow: spin-slow 2s linear infinite;
+  --animate-blink: blink 1.1s ease-in-out infinite;
 
   @keyframes fade-up {
     0%   { opacity: 0; transform: translateY(20px); filter: blur(4px); }
@@ -62,6 +206,10 @@
     0%, 100% { opacity: 0.4; transform: scale(1); }
     50%      { opacity: 1;   transform: scale(1.15); }
   }
+  @keyframes pulse-ring {
+    0%   { opacity: 0.9; transform: scale(1); }
+    100% { opacity: 0;   transform: scale(1.7); }
+  }
   @keyframes ticker {
     0%   { transform: translateX(0); }
     100% { transform: translateX(-50%); }
@@ -70,22 +218,53 @@
     0%   { transform: translateY(-100%); }
     100% { transform: translateY(100vh); }
   }
+  @keyframes dash {
+    0%   { stroke-dashoffset: 24; }
+    100% { stroke-dashoffset: 0; }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+  @keyframes spin-slow {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.2; }
+  }
 }
 
-html, body { background: hsl(var(--hero-bg)); }
-body {
-  font-family: var(--font-sora);
-  -webkit-font-smoothing: antialiased;
-  color: hsl(var(--foreground));
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    font-family: var(--font-sora), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    @apply bg-background text-foreground;
+  }
+  html { scroll-behavior: smooth; }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 25%, transparent);
+    color: var(--foreground);
+  }
 }
 
-.bg-panel { background-color: hsl(var(--panel)); }
+/* --------------------------------------------------------------
+   Legacy utilities kept for existing components that reference
+   them. New code should prefer the shadcn equivalents:
+     bg-panel   → bg-card
+     bg-hero-bg → bg-background
+     bg-panel2  → bg-muted
+-------------------------------------------------------------- */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .marquee { display: inline-flex; will-change: transform; }
 .btn-press:active { transform: scale(0.97); }
 
 .dotted-x {
-  background-image: radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
   background-size: 8px 8px;
   background-repeat: repeat-x;
   background-position: center;
@@ -98,11 +277,8 @@ body {
   line-height: 1.65;
 }
 
-html { scroll-behavior: smooth; }
-::selection { background: hsl(var(--primary) / 0.25); color: hsl(var(--foreground)); }
-
 .hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hline {
   height: 1px;
-  background: linear-gradient(90deg, transparent, hsl(var(--border)) 20%, hsl(var(--border)) 80%, transparent);
+  background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
 }

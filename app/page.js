@@ -1,29 +1,25 @@
 import Navbar from "./components/Navbar";
-import Hero from "./components/Hero";
-import {
-  TrustTicker,
-  Pillars,
-  FeatureShowcase,
-  Accelerators,
-  Governance,
-  Testimonial,
-  ClosingCTA,
-  Footer,
-} from "./components/Sections";
+import ArchitectureDiagram from "./components/home/ArchitectureDiagram";
+import FooterCTA from "./components/home/FooterCTA";
+import Hero from "./components/home/Hero";
+import PlatformPillars from "./components/home/PlatformPillars";
+import SolutionsPreview from "./components/home/SolutionsPreview";
+import TrustStrip from "./components/home/TrustStrip";
+import UseCases from "./components/home/UseCases";
 
 export default function Page() {
   return (
-    <div className="bg-hero-bg min-h-screen relative">
+    <div className="bg-hero-bg min-h-screen">
       <Navbar />
-      <Hero />
-      <TrustTicker />
-      <Pillars />
-      <FeatureShowcase />
-      <Accelerators />
-      <Governance />
-      <Testimonial />
-      <ClosingCTA />
-      <Footer />
+      <main>
+        <Hero />
+        <TrustStrip />
+        <PlatformPillars />
+        <SolutionsPreview />
+        <ArchitectureDiagram />
+        <UseCases />
+        <FooterCTA />
+      </main>
     </div>
   );
 }

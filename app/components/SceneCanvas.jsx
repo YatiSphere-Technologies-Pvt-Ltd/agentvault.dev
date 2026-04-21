@@ -35,9 +35,10 @@ export default function SceneCanvas({ mode = "vault", theme = "light-calm", over
     let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
 
     const isLight = theme === "light-calm";
-    const accentHSL = readCssVar("--primary", "232 45% 38%");
-    const fgHSL = readCssVar("--foreground", "222 28% 14%");
-    const bgHSL = readCssVar("--hero-bg", "36 22% 96%");
+    // Canvas parses H-S-L numerically; read the dedicated --hsl-* fallback tokens.
+    const accentHSL = readCssVar("--hsl-primary", "232 45% 38%");
+    const fgHSL = readCssVar("--hsl-foreground", "222 28% 14%");
+    const bgHSL = readCssVar("--hsl-hero-bg", "36 22% 96%");
     const C = {
       bg: hslVarToRgba(bgHSL, 1),
       accent: (a) => hslVarToRgba(accentHSL, a),
@@ -424,8 +425,8 @@ export default function SceneCanvas({ mode = "vault", theme = "light-calm", over
         className="absolute inset-y-0 left-0 w-2/3 pointer-events-none"
         style={{
           background: isLight
-            ? "linear-gradient(90deg, hsl(var(--hero-bg)) 0%, hsl(var(--hero-bg) / 0.85) 40%, hsl(var(--hero-bg) / 0) 100%)"
-            : "linear-gradient(90deg, hsl(var(--hero-bg)) 0%, hsl(var(--hero-bg) / 0.7) 45%, hsl(var(--hero-bg) / 0) 100%)",
+            ? "linear-gradient(90deg, var(--background) 0%, color-mix(in oklab, var(--background) 85%, transparent) 40%, transparent 100%)"
+            : "linear-gradient(90deg, var(--background) 0%, color-mix(in oklab, var(--background) 70%, transparent) 45%, transparent 100%)",
           zIndex: 3,
         }}
       />
@@ -440,7 +441,7 @@ export default function SceneCanvas({ mode = "vault", theme = "light-calm", over
         className="absolute inset-0 pointer-events-none"
         style={{
           background: isLight
-            ? "linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 25%, transparent 75%, hsl(var(--hero-bg) / 1) 100%)"
+            ? "linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 25%, transparent 75%, var(--background) 100%)"
             : "linear-gradient(180deg, rgba(0,0,0,0.2) 0%, transparent 30%, transparent 75%, rgba(0,0,0,0.5) 100%)",
           zIndex: 3,
         }}

@@ -193,25 +193,96 @@ function DoneStrip({ variant, result }) {
   return <div className="text-[9.5px] font-mono text-accent">✓ {result.latency}ms</div>;
 }
 
-function NodeCard({ node, selected, runState, runResult, tick, onMouseDown, onPortDown, onClick }) {
+/* The amber action chip that appears attached to an agent node when it's
+   paused for a human decision. Sits above the node, doesn't move with the
+   node's drag handlers, intercepts clicks (so dragging the node doesn't
+   trigger Approve). Stays compact by default; a "details" toggle expands
+   the preview inline without opening the inspector. */
+function ApprovalActionChip({ node, pendingApproval, onResolveApproval }) {
+  const [expanded, setExpanded] = useState(false);
+  const decisions = pendingApproval.approval?.decisions || ['approve', 'reject'];
+  const phaseLabel = pendingApproval.phase === 'before_run'  ? 'Pre-flight'
+                   : pendingApproval.phase === 'before_tool' ? 'Tool guardrail'
+                   : pendingApproval.phase === 'after_run'   ? 'Post-flight'
+                   : pendingApproval.phase === 'on_demand'   ? 'Clarifying'
+                   : 'Awaiting human';
+
+  return (
+    <div
+      className="absolute z-30"
+      // Anchor above the node; doesn't follow the brand glyph so it keeps a
+      // consistent offset regardless of node size.
+      style={{ left: -10, top: -68, width: NODE_W + 20 }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="rounded-lg border border-amber-400/70 bg-panel shadow-lg">
+        <div className="px-2.5 py-1.5 border-b border-amber-400/40 flex items-center gap-2">
+          <span className="inline-block h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+          <span className="text-[10px] uppercase tracking-[0.18em] font-mono text-amber-700 dark:text-amber-400">{phaseLabel}</span>
+          {pendingApproval.toolId && (
+            <span className="text-[10px] font-mono text-muted-foreground truncate">{pendingApproval.toolId}</span>
+          )}
+          <button
+            type="button"
+            onClick={() => setExpanded(v => !v)}
+            className="ml-auto text-[10px] font-mono text-muted-foreground hover:text-foreground"
+          >
+            {expanded ? 'hide' : 'details'}
+          </button>
+        </div>
+
+        {expanded && pendingApproval.preview && (
+          <pre className="px-2.5 py-2 text-[10.5px] font-mono text-foreground/85 whitespace-pre-wrap max-h-32 overflow-y-auto border-b border-border/60">{pendingApproval.preview}</pre>
+        )}
+
+        <div className="px-2 py-1.5 flex items-center gap-1.5">
+          {decisions.map(d => {
+            const isReject = d === 'reject';
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() => onResolveApproval?.(node.id, d)}
+                className={`text-[11px] px-2 py-1 rounded font-medium transition-colors flex-1 ${
+                  isReject
+                    ? 'border border-destructive/60 text-destructive hover:bg-destructive/10'
+                    : 'btn-primary'
+                }`}
+              >
+                {d}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NodeCard({ node, selected, runState, runResult, pendingApproval, onResolveApproval, tick, onMouseDown, onPortDown, onClick }) {
   const v = getVariant(node.variantId);
   if (!v) return null;
   const accent = v.kindDef.accent;
   const brand = brandFor(v.id);
 
+  const isAwaiting = !!pendingApproval;
+
   const stateClass =
-      runState === 'running' ? 'node-running'
+      isAwaiting              ? 'node-awaiting'
+    : runState === 'running' ? 'node-running'
     : runState === 'success' ? 'node-success'
     : runState === 'error'   ? 'node-error'
     : selected ? 'node-selected' : '';
 
   const stroke =
-      runState === 'running' ? 'var(--primary)'
+      isAwaiting              ? 'rgb(245 158 11)'  // amber-500
+    : runState === 'running' ? 'var(--primary)'
     : runState === 'success' ? 'var(--accent)'
     : runState === 'error'   ? 'var(--destructive)'
     : selected ? 'var(--primary)'
     : 'var(--border)';
-  const strokeW = (runState === 'running' || selected) ? 1.8 : 1.2;
+  const strokeW = (runState === 'running' || isAwaiting || selected) ? 1.8 : 1.2;
 
   const kindColors = { primary: 'text-primary', accent: 'text-accent', foreground: 'text-foreground' };
   const kindColor = kindColors[accent] || 'text-muted-foreground';
@@ -257,12 +328,22 @@ function NodeCard({ node, selected, runState, runResult, tick, onMouseDown, onPo
             ? <LiveStrip variant={v} runState={runState} tick={tick} />
             : runState === 'success'
               ? <DoneStrip variant={v} result={runResult} />
-              : <div className="text-[9.5px] font-mono text-muted-foreground truncate">{v.sub} · {node.id}</div>
+              : v.id === 'agent.autonomous'
+                ? <div className="text-[9.5px] font-mono text-muted-foreground truncate flex items-center gap-1.5">
+                    <span>{(node.params?.tools?.length ?? 0)} tools · max {(node.params?.max_steps ?? 8)} steps</span>
+                    {(node.params?.approvals?.filter(a => a.enabled).length ?? 0) > 0 && (
+                      <span title="approval points" className="inline-flex items-center gap-0.5 px-1 py-0 rounded bg-amber-100 dark:bg-amber-400/10 text-amber-700 dark:text-amber-400 border border-amber-300/60 dark:border-amber-400/30">
+                        <span>🛡</span>
+                        <span>{node.params.approvals.filter(a => a.enabled).length}</span>
+                      </span>
+                    )}
+                  </div>
+                : <div className="text-[9.5px] font-mono text-muted-foreground truncate">{v.sub} · {node.id}</div>
           }
         </div>
       </div>
 
-      {runState === 'running' && (
+      {runState === 'running' && !isAwaiting && (
         <div className="absolute pointer-events-none" style={{ inset: 0 }}>
           <svg width={NODE_W} height={NODE_H} className="absolute overflow-visible">
             <path d={shapePath()} fill="none" stroke="var(--primary)" strokeWidth="2" opacity="0.6">
@@ -270,6 +351,26 @@ function NodeCard({ node, selected, runState, runResult, tick, onMouseDown, onPo
             </path>
           </svg>
         </div>
+      )}
+
+      {/* Awaiting-human visual: amber pulsing ring + an attached action chip
+          with Approve/Reject. Action chip is positioned just above the node
+          and is the primary call-to-action for the operator. */}
+      {isAwaiting && (
+        <>
+          <div className="absolute pointer-events-none" style={{ inset: 0 }}>
+            <svg width={NODE_W} height={NODE_H} className="absolute overflow-visible">
+              <path d={shapePath()} fill="none" stroke="rgb(245 158 11)" strokeWidth="2.2" opacity="0.85">
+                <animate attributeName="stroke-opacity" values="0.85;0.25;0.85" dur="1.4s" repeatCount="indefinite" />
+              </path>
+            </svg>
+          </div>
+          <ApprovalActionChip
+            node={node}
+            pendingApproval={pendingApproval}
+            onResolveApproval={onResolveApproval}
+          />
+        </>
       )}
 
       {v.kind !== 'trigger' && (
@@ -359,6 +460,7 @@ export default function Canvas({
   workflow, setWorkflow,
   selectedId, setSelectedId,
   runStates, runResults, tick,
+  pendingApprovals, onResolveApproval,
   viewport, setViewport,
   onAddAfter,
   fitViewRef,
@@ -612,6 +714,8 @@ export default function Canvas({
               selected={selectedId === n.id}
               runState={runStates?.nodes?.[n.id]}
               runResult={runResults?.[n.id]}
+              pendingApproval={pendingApprovals?.[n.id]}
+              onResolveApproval={onResolveApproval}
               tick={tick}
               onMouseDown={onNodeMouseDown}
               onPortDown={onPortDown}

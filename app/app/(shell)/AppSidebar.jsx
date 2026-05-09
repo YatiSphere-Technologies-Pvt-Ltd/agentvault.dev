@@ -12,6 +12,8 @@ const NAV = [
   { href: '/app/studio',     label: 'Agent Studio', icon: 'studio', badge: 'Beta' },
   { href: '/app/agents',     label: 'Agents',       icon: 'agent' },
   { href: '/app/knowledge',  label: 'Knowledge',    icon: 'knowledge' },
+  { href: '/app/tools',      label: 'Tools',        icon: 'tools' },
+  { href: '/app/vault',      label: 'Vault',        icon: 'vault' },
   { href: '/app/mcp',        label: 'MCP Servers',  icon: 'mcp' },
   { href: '/app/runs',       label: 'Runs',         icon: 'runs' },
   {
@@ -29,6 +31,14 @@ const NAV = [
   },
 ];
 
+// Suite SKUs. Only GRC is wired today; the others render as locked rows.
+const SUITES = [
+  { href: '/app/grc',        label: 'GRC Suite',     icon: 'grc',       enabled: true },
+  { href: '/app/kyc',        label: 'KYC Intel',     icon: 'kyc',       enabled: false },
+  { href: '/app/workforce',  label: 'Workforce',     icon: 'workforce', enabled: false },
+  { href: '/app/context',    label: 'Context',       icon: 'context',   enabled: false },
+];
+
 function Icon({ name, size = 16 }) {
   const p = { width: size, height: size, viewBox: '0 0 20 20', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' };
   switch (name) {
@@ -37,8 +47,14 @@ function Icon({ name, size = 16 }) {
     case 'agent':    return <svg {...p}><circle cx="10" cy="8" r="3"/><path d="M4 17c1-3 3.5-4 6-4s5 1 6 4"/></svg>;
     case 'runs':     return <svg {...p}><path d="M5 10h10M12 6l4 4-4 4"/><circle cx="3" cy="10" r="0.5" fill="currentColor"/></svg>;
     case 'knowledge': return <svg {...p}><path d="M4 5h12v3H4zM4 10h12v3H4zM4 15h12"/></svg>;
+    case 'tools':     return <svg {...p}><path d="M14.7 5.3a3 3 0 1 1 0 4.2l-1.5 1.5 4.5 4.5-1.4 1.4-4.5-4.5-1.5 1.5a3 3 0 1 1-4.2-4.2l1.5-1.5L4.4 6.4 5.8 5l3.5 3.5 1.5-1.5a3 3 0 0 1 4-1.7Z"/></svg>;
+    case 'vault':     return <svg {...p}><rect x="3" y="4" width="14" height="13" rx="2"/><circle cx="10" cy="10" r="2.5"/><path d="M10 12.5v1.5M5 8h1M14 8h1"/></svg>;
     case 'mcp':       return <svg {...p}><circle cx="10" cy="10" r="2"/><circle cx="4" cy="6" r="1.5"/><circle cx="16" cy="6" r="1.5"/><circle cx="4" cy="14" r="1.5"/><circle cx="16" cy="14" r="1.5"/><path d="M5.3 6.8L8.7 9.2M14.7 6.8L11.3 9.2M5.3 13.2L8.7 10.8M14.7 13.2L11.3 10.8"/></svg>;
     case 'settings': return <svg {...p}><circle cx="10" cy="10" r="2.5"/><path d="M10 2v2M10 16v2M18 10h-2M4 10H2M15.7 4.3l-1.4 1.4M5.7 14.3l-1.4 1.4M15.7 15.7l-1.4-1.4M5.7 5.7L4.3 4.3"/></svg>;
+    case 'grc':       return <svg {...p}><path d="M10 3l6 2v5c0 4-3 6-6 7-3-1-6-3-6-7V5l6-2z"/><path d="M7.5 10l2 2 3-3.5"/></svg>;
+    case 'kyc':       return <svg {...p}><circle cx="10" cy="8" r="3"/><path d="M4 17c1-3 3.5-4 6-4s5 1 6 4"/><path d="M14 4l2 2-2 2"/></svg>;
+    case 'workforce': return <svg {...p}><circle cx="6" cy="7" r="2"/><circle cx="14" cy="7" r="2"/><path d="M2 16c0-2.5 2-4 4-4s4 1.5 4 4M10 16c0-2.5 2-4 4-4s4 1.5 4 4"/></svg>;
+    case 'context':   return <svg {...p}><path d="M3 5h14v10H3z"/><path d="M3 9h14M7 5v10"/></svg>;
     default:         return null;
   }
 }
@@ -123,6 +139,22 @@ export default function AppSidebar({ collapsed, onToggle }) {
               <Icon name={n.icon} />
             </Link>
           ))}
+          <div className="my-2 h-px w-8 bg-border" />
+          {SUITES.map(s => (
+            s.enabled ? (
+              <Link key={s.href} href={s.href} title={s.label}
+                className={`h-9 w-9 rounded flex items-center justify-center transition-colors ${
+                  isActive(s.href) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}>
+                <Icon name={s.icon} />
+              </Link>
+            ) : (
+              <span key={s.href} title={`${s.label} · coming soon`}
+                className="h-9 w-9 rounded flex items-center justify-center text-muted-foreground/40 cursor-not-allowed">
+                <Icon name={s.icon} />
+              </span>
+            )
+          ))}
         </nav>
       </aside>
     );
@@ -160,7 +192,7 @@ export default function AppSidebar({ collapsed, onToggle }) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
         <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-mono">Build</div>
-        {NAV.map(n =>
+        {NAV.filter(n => n.href !== '/app/settings').map(n =>
           n.children ? (
             <NavGroup key={n.href} item={n} pathname={pathname} />
           ) : (
@@ -180,6 +212,34 @@ export default function AppSidebar({ collapsed, onToggle }) {
             </Link>
           )
         )}
+
+        <div className="px-2 pt-4 pb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-mono">Suites</div>
+        {SUITES.map(s =>
+          s.enabled ? (
+            <Link key={s.href} href={s.href}
+              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] transition-colors ${
+                isActive(s.href)
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-foreground/80 hover:bg-muted hover:text-foreground'
+              }`}>
+              <Icon name={s.icon} />
+              <span className="flex-1 truncate">{s.label}</span>
+            </Link>
+          ) : (
+            <div key={s.href}
+              className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] text-muted-foreground/55 cursor-not-allowed"
+              title="Coming soon">
+              <Icon name={s.icon} />
+              <span className="flex-1 truncate">{s.label}</span>
+              <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded border border-border text-muted-foreground/70">soon</span>
+            </div>
+          )
+        )}
+
+        <div className="px-2 pt-4 pb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-mono">Account</div>
+        {NAV.filter(n => n.href === '/app/settings').map(n => (
+          <NavGroup key={n.href} item={n} pathname={pathname} />
+        ))}
       </nav>
 
       {/* Workspace status footer */}

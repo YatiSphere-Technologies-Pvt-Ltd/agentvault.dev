@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import AgentInspector from './AgentInspector';
+import LlmChatInspector from './LlmChatInspector';
 import { accentClass, NodeIcon } from './node-kinds';
 
 function Field({ label, children, hint }) {
@@ -32,8 +34,10 @@ function SelectInput({ value, onChange, options }) {
   );
 }
 
-export default function Inspector({ node, variant, onUpdate, onDelete, onClose, runStates, collapsed, onToggle }) {
+export default function Inspector({ node, variant, workflow, onUpdate, onDelete, onClose, runStates, collapsed, onToggle }) {
   const [tab, setTab] = useState('config');
+  const isChat  = variant?.id === 'llm.chat';
+  const isAgent = variant?.id === 'agent.autonomous';
 
   if (collapsed) {
     return (
@@ -197,6 +201,22 @@ export default function Inspector({ node, variant, onUpdate, onDelete, onClose, 
         </div>
       </div>
 
+      {isChat ? (
+        <LlmChatInspector
+          node={node}
+          workflow={workflow}
+          onUpdate={onUpdate}
+          runStates={runStates}
+        />
+      ) : isAgent ? (
+        <AgentInspector
+          node={node}
+          workflow={workflow}
+          onUpdate={onUpdate}
+          runStates={runStates}
+        />
+      ) : (
+      <>
       <div className="flex px-4 border-b border-border">
         {['config','io','runs'].map(t => (
           <button key={t} onClick={() => setTab(t)}
@@ -237,6 +257,8 @@ export default function Inspector({ node, variant, onUpdate, onDelete, onClose, 
           </div>
         )}
       </div>
+      </>
+      )}
 
       <div className="border-t border-border p-3 flex items-center justify-between">
         <button onClick={() => onDelete(node.id)} className="text-[11.5px] text-destructive hover:brightness-110 px-2 py-1 rounded font-medium">Delete node</button>

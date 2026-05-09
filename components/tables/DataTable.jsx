@@ -12,8 +12,8 @@ import {
 import { ArrowUp, ArrowDown, ChevronsUpDown, ChevronLeft, ChevronRight, Columns3, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -31,7 +31,8 @@ import {
  *   globalFilter  — string; filtered across all columns using the default fuzzy matcher
  *   onGlobalFilterChange — (str) => void, controlled
  *   onRowClick    — (row.original) => void; row cursor becomes pointer
- *   toolbar       — React node rendered above the table (left side)
+ *   toolbar       — React node rendered above the table on the left (typically the search input)
+ *   filters       — React node rendered between toolbar and Columns (typically <FacetFilterBar/>)
  *   emptyMessage  — string shown when there are zero rows
  *   pageSize      — initial page size (default 20). Use Infinity to disable pagination.
  *   minWidth      — min-width class for the inner table to force horizontal scroll on narrow viewports
@@ -44,6 +45,7 @@ export function DataTable({
   onGlobalFilterChange,
   onRowClick,
   toolbar,
+  filters,
   emptyMessage = 'No rows.',
   pageSize = 20,
   minWidth = 'min-w-[640px]',
@@ -75,40 +77,47 @@ export function DataTable({
 
   const visibleLeafCols = table.getAllLeafColumns().filter(c => c.getCanHide());
 
+  const hasToolbarRow = !!(toolbar || filters || visibleLeafCols.length > 0);
+
   return (
     <div className="space-y-3">
-      {(toolbar || visibleLeafCols.length > 0) && (
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">{toolbar}</div>
-          {visibleLeafCols.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger render={
-                <Button variant="outline" size="sm">
-                  <Columns3 className="h-3.5 w-3.5" /> Columns
-                </Button>
-              } />
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="text-[10.5px] uppercase tracking-[0.15em] font-mono text-muted-foreground">
-                  Toggle columns
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {visibleLeafCols.map(col => (
-                  <DropdownMenuCheckboxItem
-                    key={col.id}
-                    checked={col.getIsVisible()}
-                    onCheckedChange={v => col.toggleVisibility(!!v)}
-                    className="capitalize"
-                  >
-                    {String(col.columnDef.header ?? col.id).toString().toLowerCase()}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      )}
-
       <div className="rounded-xl border bg-card overflow-hidden">
+        {hasToolbarRow && (
+          <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b bg-muted/20">
+            <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+              {toolbar}
+              {filters}
+            </div>
+            {visibleLeafCols.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger render={
+                  <Button variant="outline" size="sm" className="h-8 text-[12px] shrink-0">
+                    <Columns3 className="h-3.5 w-3.5" /> View
+                  </Button>
+                } />
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">
+                      Toggle columns
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {visibleLeafCols.map(col => (
+                      <DropdownMenuCheckboxItem
+                        key={col.id}
+                        checked={col.getIsVisible()}
+                        onCheckedChange={v => col.toggleVisibility(!!v)}
+                        className="capitalize text-[12.5px]"
+                      >
+                        {String(col.columnDef.header ?? col.id).toString().toLowerCase()}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <Table className={minWidth}>
             <TableHeader className="bg-muted/40">

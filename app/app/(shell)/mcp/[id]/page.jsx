@@ -182,9 +182,27 @@ function OverviewTab({ server, vendor }) {
                   <Kv k="Private key" v={maskedRef(server.auth.keyRef)} mono />
                 </>
               )}
-              <Kv k="Approval policy" v={APPROVAL_POLICIES.find(p => p.id === server.approvalPolicy)?.label || server.approvalPolicy} />
-              <Kv k="Visibility"      v={server.visibility} />
               <Kv k="Version pin"     v={server.versionPin} mono />
+            </dl>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[15px]">Access</CardTitle>
+            <CardDescription>Who in this workspace can attach + invoke tools from this server.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <dl className="divide-y divide-border/60 border border-border rounded-lg">
+              <Kv k="Visibility"       v={<span className="capitalize">{server.visibility}</span>} />
+              <Kv k="Approval policy"  v={APPROVAL_POLICIES.find(p => p.id === server.approvalPolicy)?.label || server.approvalPolicy} />
+              <Kv k="ACL mode"         v={server.acl?.mode === 'allow-list' ? `Allow list · ${(server.acl.allowGroups || []).length} group${(server.acl.allowGroups || []).length === 1 ? '' : 's'}` : 'Inherit (vendor scoping)'} />
+              {server.acl?.mode === 'allow-list' && (server.acl.allowGroups || []).length > 0 && (
+                <Kv k="Groups" v={(server.acl.allowGroups || []).join(', ')} mono />
+              )}
+              <Kv k="IP allowlist"     v={(server.allowedIps || []).length > 0 ? (server.allowedIps || []).join(', ') : 'unrestricted'} mono />
+              <Kv k="Tools approval-gated" v={`${server.tools.filter(t => t.approval).length} of ${server.tools.length}`} />
+              <Kv k="Tools disabled"   v={`${server.tools.filter(t => !t.enabled).length} of ${server.tools.length}`} />
             </dl>
           </CardContent>
         </Card>

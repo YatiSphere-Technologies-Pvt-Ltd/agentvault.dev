@@ -22,7 +22,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${sora.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${sora.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sora antialiased bg-hero-bg min-h-screen">
         <AuthProvider>{children}</AuthProvider>
       </body>

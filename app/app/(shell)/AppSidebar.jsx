@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { useWorkspaces } from './_workspaceStore';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
+import { usePendingCount } from './approvals/_store';
 
 const NAV = [
   { href: '/app',            label: 'Home',         icon: 'home' },
@@ -16,6 +17,7 @@ const NAV = [
   { href: '/app/vault',      label: 'Vault',        icon: 'vault' },
   { href: '/app/mcp',        label: 'MCP Servers',  icon: 'mcp' },
   { href: '/app/runs',       label: 'Runs',         icon: 'runs' },
+  { href: '/app/approvals',  label: 'Approvals',    icon: 'approvals' },
   {
     href: '/app/settings',
     label: 'Settings',
@@ -50,6 +52,7 @@ function Icon({ name, size = 16 }) {
     case 'tools':     return <svg {...p}><path d="M14.7 5.3a3 3 0 1 1 0 4.2l-1.5 1.5 4.5 4.5-1.4 1.4-4.5-4.5-1.5 1.5a3 3 0 1 1-4.2-4.2l1.5-1.5L4.4 6.4 5.8 5l3.5 3.5 1.5-1.5a3 3 0 0 1 4-1.7Z"/></svg>;
     case 'vault':     return <svg {...p}><rect x="3" y="4" width="14" height="13" rx="2"/><circle cx="10" cy="10" r="2.5"/><path d="M10 12.5v1.5M5 8h1M14 8h1"/></svg>;
     case 'mcp':       return <svg {...p}><circle cx="10" cy="10" r="2"/><circle cx="4" cy="6" r="1.5"/><circle cx="16" cy="6" r="1.5"/><circle cx="4" cy="14" r="1.5"/><circle cx="16" cy="14" r="1.5"/><path d="M5.3 6.8L8.7 9.2M14.7 6.8L11.3 9.2M5.3 13.2L8.7 10.8M14.7 13.2L11.3 10.8"/></svg>;
+    case 'approvals': return <svg {...p}><path d="M3 5h14v8a2 2 0 0 1-2 2H7l-3 3v-3a2 2 0 0 1-1-2V5z"/><path d="M7.5 9.5l2 2 3-3"/></svg>;
     case 'settings': return <svg {...p}><circle cx="10" cy="10" r="2.5"/><path d="M10 2v2M10 16v2M18 10h-2M4 10H2M15.7 4.3l-1.4 1.4M5.7 14.3l-1.4 1.4M15.7 15.7l-1.4-1.4M5.7 5.7L4.3 4.3"/></svg>;
     case 'grc':       return <svg {...p}><path d="M10 3l6 2v5c0 4-3 6-6 7-3-1-6-3-6-7V5l6-2z"/><path d="M7.5 10l2 2 3-3.5"/></svg>;
     case 'kyc':       return <svg {...p}><circle cx="10" cy="8" r="3"/><path d="M4 17c1-3 3.5-4 6-4s5 1 6 4"/><path d="M14 4l2 2-2 2"/></svg>;
@@ -120,6 +123,9 @@ export default function AppSidebar({ collapsed, onToggle }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const { list, current, currentId, switchTo, create, rename, remove } = useWorkspaces(user?.workspace);
+  // Live count of open approval tasks. Drives the sidebar badge so people
+  // know there's work waiting for them without having to navigate away.
+  const pendingApprovals = usePendingCount(t => t.status === 'pending' || t.status === 'claimed');
 
   const isActive = (href) => href === '/app' ? pathname === '/app' : pathname.startsWith(href);
 
@@ -133,10 +139,15 @@ export default function AppSidebar({ collapsed, onToggle }) {
         <nav className="flex-1 flex flex-col gap-1 items-center mt-2">
           {NAV.map(n => (
             <Link key={n.href} href={n.href} title={n.label}
-              className={`h-9 w-9 rounded flex items-center justify-center transition-colors ${
+              className={`relative h-9 w-9 rounded flex items-center justify-center transition-colors ${
                 isActive(n.href) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}>
               <Icon name={n.icon} />
+              {n.icon === 'approvals' && pendingApprovals > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-mono font-medium tabular-nums flex items-center justify-center">
+                  {pendingApprovals}
+                </span>
+              )}
             </Link>
           ))}
           <div className="my-2 h-px w-8 bg-border" />
@@ -204,6 +215,11 @@ export default function AppSidebar({ collapsed, onToggle }) {
               }`}>
               <Icon name={n.icon} />
               <span className="flex-1 truncate">{n.label}</span>
+              {n.icon === 'approvals' && pendingApprovals > 0 && (
+                <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-primary text-primary-foreground tabular-nums">
+                  {pendingApprovals}
+                </span>
+              )}
               {n.badge && (
                 <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded border border-accent/40 text-accent bg-accent/10">
                   {n.badge}

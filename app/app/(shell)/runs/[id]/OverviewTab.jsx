@@ -9,6 +9,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { KIND_META } from '../_traces';
 import { fmtMs } from './_replay';
+import ApprovalsForRun from './ApprovalsForRun';
+import NudgeBox from './NudgeBox';
 
 /* OverviewTab
    -----------
@@ -22,7 +24,7 @@ import { fmtMs } from './_replay';
    Everything here is derived from the existing trace structure — no new
    data shape needed. */
 
-export default function OverviewTab({ trace, gates, onJumpToTab }) {
+export default function OverviewTab({ runId, trace, gates, onJumpToTab }) {
   const root = trace.spans.find(s => s.parentId === null);
   const userPrompt = root?.input?.user_message || '—';
   const finalSpan  = trace.spans.find(s => s.id === 'sp_summarize') || trace.spans[trace.spans.length - 1];
@@ -64,6 +66,13 @@ export default function OverviewTab({ trace, gates, onJumpToTab }) {
           />
         </div>
       </div>
+
+      {/* Human approvals tied to this run — only renders when there are tasks */}
+      <ApprovalsForRun runId={runId} />
+
+      {/* Nudge composer — out-of-band steering for autonomous runs.
+          Hidden for finished runs unless there's prior nudge history. */}
+      <NudgeBox runId={runId} runStatus={trace.status} />
 
       {/* Phase timeline — what happened, in order */}
       <Section title="Phase timeline" subtitle={`${phases.length} phase${phases.length === 1 ? '' : 's'} · sequential, with durations`}>

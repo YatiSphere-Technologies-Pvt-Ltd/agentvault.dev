@@ -235,7 +235,7 @@ export default function RunTracePage() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-5">
-          <OverviewTab trace={trace} gates={gates} onJumpToTab={setTab} />
+          <OverviewTab runId={id} trace={trace} gates={gates} onJumpToTab={setTab} />
         </TabsContent>
 
         <TabsContent value="trace" className="mt-5">

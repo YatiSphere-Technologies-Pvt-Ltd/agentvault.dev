@@ -168,3 +168,105 @@ body:has(.studio-root) { overflow: hidden; }
 
 .studio-root input, .studio-root select, .studio-root textarea { color: var(--foreground); }
 .studio-root input::placeholder, .studio-root textarea::placeholder { color: color-mix(in oklab, var(--muted-foreground) 70%, transparent); }
+
+/* ─── Launcher ─────────────────────────────────────────────────────────── */
+
+.studio-root .studio-launcher {
+  background:
+    radial-gradient(900px 500px at 12% 0%,  color-mix(in oklab, var(--primary) 10%, transparent), transparent 70%),
+    radial-gradient(900px 500px at 100% 30%, color-mix(in oklab, var(--accent)  10%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--hero-bg), var(--canvas-bg));
+}
+
+.studio-root .launcher-aurora {
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-image: radial-gradient(circle, color-mix(in oklab, var(--canvas-dot) 45%, transparent) 1px, transparent 1.4px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse at top, black 35%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse at top, black 35%, transparent 85%);
+  opacity: 0.55;
+}
+
+.studio-root .launcher-icon-tile {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 8%, var(--panel));
+  border: 1px solid color-mix(in oklab, var(--primary) 30%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 8%, transparent);
+}
+.studio-root .launcher-icon-tile-sm {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 6%, var(--panel));
+  border: 1px solid color-mix(in oklab, var(--primary) 22%, transparent);
+}
+
+.studio-root .launcher-hero-card {
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--primary) 7%, var(--panel)), var(--panel));
+  border: 1px solid color-mix(in oklab, var(--primary) 22%, var(--border));
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, var(--primary) 8%, transparent) inset,
+    0 12px 32px -16px color-mix(in oklab, var(--primary) 30%, transparent);
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.studio-root .launcher-hero-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--primary) 50%, var(--border));
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, var(--primary) 14%, transparent) inset,
+    0 24px 60px -28px color-mix(in oklab, var(--primary) 50%, transparent);
+}
+.studio-root .launcher-hero-card-glow {
+  position: absolute; inset: -40% -10% auto auto; height: 220px; width: 360px;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--primary) 35%, transparent), transparent 70%);
+  pointer-events: none;
+  filter: blur(8px);
+}
+
+.studio-root .launcher-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+.studio-root .launcher-card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
+  box-shadow: 0 14px 38px -22px color-mix(in oklab, var(--primary) 45%, transparent);
+}
+
+.studio-root .launcher-list-shell {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 50px -32px color-mix(in oklab, var(--foreground) 35%, transparent);
+}
+
+.studio-root .launcher-row {
+  position: relative;
+  transition: background 140ms ease, padding-left 180ms ease;
+}
+.studio-root .launcher-row:hover {
+  background: color-mix(in oklab, var(--primary) 5%, transparent);
+}
+.studio-root .launcher-row-dot {
+  width: 6px; height: 6px; border-radius: 999px;
+  background: color-mix(in oklab, var(--primary) 60%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 12%, transparent);
+}
+.studio-root .launcher-row-arrow {
+  font-size: 14px;
+  transform: translateX(0);
+  transition: transform 180ms ease;
+}
+.studio-root .launcher-row:hover .launcher-row-arrow {
+  transform: translateX(2px);
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.25); }
+}

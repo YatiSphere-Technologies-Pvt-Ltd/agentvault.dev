@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Canvas from './Canvas';
 import Inspector from './Inspector';
+import Launcher from './Launcher';
 import { getVariant } from './node-kinds';
 import { TraceRail, useRunner } from './run';
 import { NODE_H, NODE_W, SEED_WORKFLOW } from './seed';
@@ -40,8 +41,15 @@ function nextNodeId(wf) {
 
 export default function StudioApp() {
   const search = useSearchParams();
+  const router = useRouter();
   const agentId = search.get('agent');
+  const wfParam = search.get('wf');
   const isAgentView = !!agentId;
+
+  // Launcher gate — shown when there's no deep link (no ?agent=, no ?wf=).
+  // Setting to false drops the user into the canvas; "Back to launcher" sets
+  // it true again. Initialised lazily so deep links skip the launcher.
+  const [showLauncher, setShowLauncher] = useState(() => !agentId && !wfParam);
 
   const [workflow, setWorkflow] = useState(SEED_WORKFLOW);
   const [agentMeta, setAgentMeta] = useState(null);   // { id, name, mode, status } for banner
@@ -59,13 +67,36 @@ export default function StudioApp() {
   const [hydrated, setHydrated] = useState(false);
 
   const fitViewRef = useRef(null);
+  const wfDeepLinkAppliedRef = useRef(false);
 
   // Workflow store — only matters when we're NOT in agent-projection mode.
   const workflows = useWorkflows();
 
-  // Hydrate on mount (and whenever the selected workflow changes) — either
+  // Reset the deep-link guard whenever the ?wf= value changes, so a later
+  // navigation to a different workflow id is honoured.
+  useEffect(() => { wfDeepLinkAppliedRef.current = false; }, [wfParam]);
+
+  // One-shot: if the URL has ?wf=<id>, point the store at that workflow.
+  // Runs at most once per ?wf= value to avoid feedback with the persist effect
+  // below (which mutates `workflows.list` on every workflow edit).
+  useEffect(() => {
+    if (isAgentView) return;
+    if (!workflows.ready) return;
+    if (!wfParam) return;
+    if (wfDeepLinkAppliedRef.current) return;
+    if (workflows.currentId === wfParam) { wfDeepLinkAppliedRef.current = true; return; }
+    if (workflows.list.some(w => w.id === wfParam)) {
+      workflows.switchTo(wfParam);
+      wfDeepLinkAppliedRef.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAgentView, wfParam, workflows.ready, workflows.currentId]);
+
+  // Hydrate on mount (and whenever the selected workflow id changes) — either
   // load the agent-derived workflow (read-only) or the current workflow's
-  // body from the store.
+  // body from the store. Intentionally depends only on `currentId` (a string),
+  // not on `workflows.list` or function identities, to prevent loops with the
+  // persist effect.
   useEffect(() => {
     if (isAgentView) {
       const derived = loadAgentDerivedWorkflow(agentId);
@@ -96,6 +127,7 @@ export default function StudioApp() {
     setLogs([]);
     setActiveNodeId(null);
     setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAgentView, agentId, workflows.ready, workflows.currentId]);
 
   useEffect(() => {
@@ -215,13 +247,17 @@ export default function StudioApp() {
     return () => clearTimeout(t);
   }, [running]);
 
-  const { run, stop } = useRunner(workflow, setRunStates, setRunResults, setRunning, setLogs, setActiveNodeId);
+  const [pendingApprovals, setPendingApprovals] = useState({});
+  const { run, stop, resolveApproval } = useRunner(
+    workflow, setRunStates, setRunResults, setRunning, setLogs, setActiveNodeId, setPendingApprovals,
+  );
 
   const clearRun = () => {
     setRunStates({ nodes: {}, edges: {} });
     setRunResults({});
     setLogs([]);
     setActiveNodeId(null);
+    setPendingApprovals({});
   };
 
   const resetWorkflow = () => {
@@ -233,6 +269,27 @@ export default function StudioApp() {
     }
   };
 
+  // Launcher — start a fresh workflow from a template, or open an existing one.
+  // After either action we drop the launcher and let the existing hydration
+  // effect pull the body into the canvas.
+  const openExistingFromLauncher = useCallback((id) => {
+    workflows.switchTo(id);
+    setShowLauncher(false);
+    setHydrated(false); // allow hydration effect to repopulate
+  }, [workflows]);
+
+  const createFromLauncher = useCallback(({ name, template }) => {
+    workflows.create({ name, template });
+    setShowLauncher(false);
+    setHydrated(false);
+  }, [workflows]);
+
+  const backToLauncher = useCallback(() => {
+    // Clear any deep-link param so the launcher is the canonical entry again.
+    if (wfParam) router.replace('/app/studio');
+    setShowLauncher(true);
+  }, [router, wfParam]);
+
   return (
     <div className="studio-root h-screen w-screen flex flex-col bg-hero-bg">
       {/* Top bar */}
@@ -242,10 +299,14 @@ export default function StudioApp() {
             <Link href={`/app/agents/${agentMeta.id}`} className="text-[11.5px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
               <span>←</span><span>Back to {agentMeta.name}</span>
             </Link>
-          ) : (
+          ) : showLauncher ? (
             <Link href="/app" className="text-[11.5px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
               <span>←</span><span>Back to dashboard</span>
             </Link>
+          ) : (
+            <button onClick={backToLauncher} className="text-[11.5px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+              <span>←</span><span>All workflows</span>
+            </button>
           )}
           <span className="h-4 w-px bg-border" />
           <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
@@ -264,6 +325,11 @@ export default function StudioApp() {
                   {agentMeta?.status && <span className="text-accent">· {agentMeta.status}</span>}
                 </div>
               </>
+            ) : showLauncher ? (
+              <div>
+                <div className="text-[14px] font-semibold text-foreground px-1.5 py-0.5">Agent Studio</div>
+                <div className="text-[10.5px] text-muted-foreground font-mono px-1.5">choose a starting point</div>
+              </div>
             ) : (
               <WorkflowSwitcher
                 list={workflows.list}
@@ -291,7 +357,7 @@ export default function StudioApp() {
             <Link href={`/app/agents/${agentMeta.id}`} className="btn-primary text-[11.5px] px-3 py-1.5 rounded-md font-medium">
               Edit in agent →
             </Link>
-          ) : (
+          ) : showLauncher ? null : (
             <>
               <button onClick={resetWorkflow} className="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-md">Reset</button>
               <button className="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-md">Validate</button>
@@ -315,6 +381,17 @@ export default function StudioApp() {
         </div>
       )}
 
+      {showLauncher && !isAgentView ? (
+        <div className="flex-1 min-h-0 relative">
+          {workflows.ready && (
+            <Launcher
+              workflows={workflows}
+              onCreate={createFromLauncher}
+              onOpen={openExistingFromLauncher}
+            />
+          )}
+        </div>
+      ) : (
       <div className="flex-1 flex min-h-0">
         <Sidebar
           onAddNode={(vid) => addNode(vid)}
@@ -331,6 +408,8 @@ export default function StudioApp() {
               setSelectedId={setSelectedId}
               runStates={runStates}
               runResults={runResults}
+              pendingApprovals={pendingApprovals}
+              onResolveApproval={resolveApproval}
               tick={tick}
               viewport={viewport}
               setViewport={setViewport}
@@ -345,6 +424,8 @@ export default function StudioApp() {
             running={running}
             activeNodeId={activeNodeId}
             logs={logs}
+            pendingApprovals={pendingApprovals}
+            onResolveApproval={resolveApproval}
             onRun={run}
             onStop={stop}
             onClear={clearRun}
@@ -356,6 +437,7 @@ export default function StudioApp() {
         <Inspector
           node={selectedNode}
           variant={selectedVariant}
+          workflow={workflow}
           onUpdate={updateNode}
           onDelete={deleteNode}
           onClose={() => setSelectedId(null)}
@@ -364,6 +446,7 @@ export default function StudioApp() {
           onToggle={() => setInspectorCollapsed(v => !v)}
         />
       </div>
+      )}
     </div>
   );
 }

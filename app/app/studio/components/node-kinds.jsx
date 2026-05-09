@@ -25,33 +25,108 @@ export const NODE_KINDS = {
     shape: 'hex',
     desc: 'Call a language model.',
     variants: [
-      { id: 'llm.chat',     label: 'Chat',     sub: 'single prompt',   icon: 'sparkles' },
+      { id: 'llm.chat',     label: 'Chat',     sub: 'multi-turn',      icon: 'sparkles' },
       { id: 'llm.classify', label: 'Classify', sub: 'structured out',  icon: 'tag' },
       { id: 'llm.extract',  label: 'Extract',  sub: 'JSON schema',     icon: 'braces' },
     ],
-    defaultParams: (variant) => ({
-      model: 'gpt-4o-mini',
-      temperature: 0.2,
-      max_tokens: 512,
-      system: 'You are a helpful agent.',
-      prompt: '{{input.text}}',
-      ...(variant === 'llm.extract' && { schema: '{ "total": "number", "vendor": "string" }' }),
-    }),
+    defaultParams: (variant) => {
+      if (variant === 'llm.chat') {
+        return {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-6',
+          system: 'You are a helpful enterprise agent. Be concise and cite sources when applicable.',
+          messages: [
+            { role: 'user', content: '{{input.text}}' },
+          ],
+          // decoding
+          temperature: 0.2,
+          top_p: 1,
+          max_tokens: 1024,
+          stop: [],
+          seed: null,
+          // shape of the response
+          response_format: 'text',          // 'text' | 'json_object' | 'json_schema'
+          json_schema: '',
+          // tool use (declarative; actual tool wiring happens via downstream nodes)
+          tool_choice: 'auto',              // 'auto' | 'none' | 'required'
+          // operational
+          stream: true,
+          prompt_cache: true,
+          retries: 2,
+          fallback_model: '',               // empty = none
+          timeout_s: 30,
+          budget_usd: 0.10,
+        };
+      }
+      return {
+        model: 'gpt-4o-mini',
+        temperature: 0.2,
+        max_tokens: 512,
+        system: 'You are a helpful agent.',
+        prompt: '{{input.text}}',
+        ...(variant === 'llm.extract' && { schema: '{ "total": "number", "vendor": "string" }' }),
+      };
+    },
   },
   agent: {
     label: 'Agent',
     category: 'AI',
     accent: 'primary',
     shape: 'hex',
-    desc: 'Sub-agent from your registry.',
+    desc: 'Sub-agent from your registry, or an autonomous tool-using agent.',
     variants: [
-      { id: 'agent.registry', label: 'Registry agent', sub: 'versioned', icon: 'agent' },
+      { id: 'agent.autonomous', label: 'Autonomous',    sub: 'tool loop',  icon: 'agent' },
+      { id: 'agent.registry',   label: 'Registry agent', sub: 'versioned', icon: 'agent' },
     ],
-    defaultParams: () => ({
-      agent_id: 'ap-triage@v2',
-      timeout_s: 30,
-      budget_usd: 0.50,
-    }),
+    defaultParams: (variant) => {
+      if (variant === 'agent.autonomous') {
+        return {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-6',
+          // Goal-oriented: this is what the agent tries to accomplish for each
+          // invocation. References context.* (declared in context_map below).
+          goal: 'Process the inbound request in context.text. Use the tools you have to answer accurately, then return a structured summary.',
+          system: 'You are an autonomous enterprise agent. Plan, choose tools, observe results, and continue until the goal is met. Cite tool outputs in your final answer.',
+          // Input mapping (§2b). Declared field names → upstream sources.
+          // The agent only sees context.<field>; it cannot reach for arbitrary
+          // upstream values. Refactor-safe and auditable.
+          context_map: [
+            { field: 'text', source: '{{trigger.text}}' },
+          ],
+          // Output schema (§2a). The agent's `result` MUST conform to this.
+          // Format here is the lo-fi "shorthand" we already use elsewhere
+          // (string keys → type names). The runner validates against it.
+          returns: '{\n  "answer": "string",\n  "confidence": "number",\n  "needs_human": "boolean"\n}',
+          // Tool registry — the set of tools this agent can choose from at
+          // runtime. Each entry references one of the catalog ids below.
+          tools: ['http.get', 'slack.post', 'snowflake.query'],
+          // Loop control
+          termination: 'goal_or_steps',     // 'max_steps' | 'goal_met' | 'goal_or_steps' | 'external_signal'
+          max_steps: 8,
+          require_goal_check: true,
+          // Decoding
+          temperature: 0.3,
+          max_tokens: 1024,
+          // Operational
+          parallel_tools: true,
+          show_thinking: true,
+          retries: 2,
+          timeout_s: 60,
+          budget_usd: 0.50,
+          stop_on_error: false,
+          // Human-in-the-loop approval points. Each entry pauses the agent
+          // (synchronously or post-hoc) and waits for a human decision. See
+          // _approvals.js for the full schema. Default ships empty — most
+          // agents don't need approvals; templates layer them in.
+          approvals: [],
+        };
+      }
+      return {
+        agent_id: 'ap-triage@v2',
+        timeout_s: 30,
+        budget_usd: 0.50,
+      };
+    },
   },
   tool: {
     label: 'Tool',
@@ -186,6 +261,189 @@ export function getVariant(variantId) {
     if (v) return { kind, ...v, kindDef: NODE_KINDS[kind] };
   }
   return null;
+}
+
+/* Provider catalog used by the LLM chat inspector. Grouped + tagged so the
+   picker can render section headers and capability hints (vision, tools,
+   reasoning). */
+export const LLM_PROVIDERS = [
+  {
+    id: 'anthropic',
+    label: 'Anthropic',
+    models: [
+      { id: 'claude-opus-4-7',     label: 'Claude Opus 4.7',     ctx: 200_000, caps: ['vision','tools','thinking'] },
+      { id: 'claude-sonnet-4-6',   label: 'Claude Sonnet 4.6',   ctx: 200_000, caps: ['vision','tools','thinking'] },
+      { id: 'claude-haiku-4-5',    label: 'Claude Haiku 4.5',    ctx: 200_000, caps: ['vision','tools'] },
+    ],
+  },
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    models: [
+      { id: 'gpt-4o',              label: 'GPT-4o',              ctx: 128_000, caps: ['vision','tools'] },
+      { id: 'gpt-4o-mini',         label: 'GPT-4o mini',         ctx: 128_000, caps: ['vision','tools'] },
+      { id: 'o3-mini',             label: 'o3-mini',             ctx: 200_000, caps: ['tools','thinking'] },
+    ],
+  },
+  {
+    id: 'google',
+    label: 'Google',
+    models: [
+      { id: 'gemini-1.5-pro',      label: 'Gemini 1.5 Pro',      ctx: 1_000_000, caps: ['vision','tools'] },
+      { id: 'gemini-1.5-flash',    label: 'Gemini 1.5 Flash',    ctx: 1_000_000, caps: ['vision','tools'] },
+    ],
+  },
+  {
+    id: 'meta',
+    label: 'Meta',
+    models: [
+      { id: 'llama-3.3-70b',       label: 'Llama 3.3 70B',       ctx:  131_072, caps: ['tools'] },
+    ],
+  },
+];
+
+export function findModel(modelId) {
+  for (const p of LLM_PROVIDERS) {
+    const m = p.models.find(x => x.id === modelId);
+    if (m) return { ...m, provider: p.id, providerLabel: p.label };
+  }
+  return null;
+}
+
+/* Tool catalog the autonomous agent can choose from at runtime. The Inspector
+   "Tools" tab renders this as a pickable list. Each tool gets a stable id, a
+   group, a one-line description (shown to the model), and a JSON-shape
+   `args` description so the loop trace can render plausible call signatures. */
+export const AGENT_TOOL_CATALOG = [
+  // HTTP / generic
+  { id: 'http.get',         group: 'Web',         label: 'HTTP GET',       desc: 'Fetch a URL and return the response body.',                  args: '{ url: string, headers?: object }' },
+  { id: 'http.post',        group: 'Web',         label: 'HTTP POST',      desc: 'POST a JSON body to a URL and return the response.',         args: '{ url: string, body: object }' },
+  { id: 'web.search',       group: 'Web',         label: 'Web search',     desc: 'Search the public web; returns top-k links + snippets.',     args: '{ query: string, k?: number }' },
+  { id: 'web.fetch',        group: 'Web',         label: 'Fetch & extract',desc: 'Fetch a URL, extract main content as text.',                  args: '{ url: string }' },
+
+  // Data
+  { id: 'snowflake.query',  group: 'Data',        label: 'Snowflake query',desc: 'Run a SELECT against the configured Snowflake warehouse.',    args: '{ sql: string }' },
+  { id: 'postgres.query',   group: 'Data',        label: 'Postgres query', desc: 'Run a SELECT against the configured Postgres.',               args: '{ sql: string }' },
+  { id: 'vector.search',    group: 'Data',        label: 'Vector search',  desc: 'Semantic search over indexed documents.',                     args: '{ query: string, k?: number, filter?: object }' },
+
+  // Knowledge
+  { id: 'kb.lookup',        group: 'Knowledge',   label: 'Knowledge lookup',desc: 'Look up a document in the agent knowledge base.',            args: '{ query: string }' },
+  { id: 'kb.cite',          group: 'Knowledge',   label: 'Citation',       desc: 'Resolve a citation to a permalinked source.',                  args: '{ doc_id: string }' },
+
+  // Communications
+  { id: 'slack.post',       group: 'Communications', label: 'Slack post',  desc: 'Post a message to a Slack channel or thread.',                args: '{ channel: string, text: string }' },
+  { id: 'email.send',       group: 'Communications', label: 'Email send',  desc: 'Send an email via the configured provider.',                  args: '{ to: string, subject: string, body: string }' },
+
+  // CRM / business
+  { id: 'salesforce.query', group: 'CRM',         label: 'Salesforce query',desc: 'SOQL query against Salesforce.',                              args: '{ soql: string }' },
+  { id: 'salesforce.update',group: 'CRM',         label: 'Salesforce update',desc: 'Update an SObject record.',                                  args: '{ object: string, id: string, fields: object }' },
+  { id: 'netsuite.bill',    group: 'CRM',         label: 'NetSuite create bill', desc: 'Create a vendor bill in NetSuite.',                     args: '{ vendor: string, amount: number, lines: array }' },
+
+  // Code / utility
+  { id: 'code.run',         group: 'Utility',     label: 'Run code',       desc: 'Execute a JS snippet in a sandbox and return the result.',    args: '{ source: string }' },
+  { id: 'calc.eval',        group: 'Utility',     label: 'Calculator',     desc: 'Evaluate a numeric expression.',                              args: '{ expr: string }' },
+
+  // Memory
+  { id: 'memory.read',      group: 'Memory',      label: 'Memory read',    desc: 'Read a key from the workflow shared memory.',                 args: '{ key: string }' },
+  { id: 'memory.write',     group: 'Memory',      label: 'Memory write',   desc: 'Write a key to the workflow shared memory.',                  args: '{ key: string, value: any }' },
+
+  // Human in the loop
+  { id: 'human.ask',        group: 'Human',       label: 'Ask a human',    desc: 'Pause and ask a human a clarifying question. Returns reply.', args: '{ question: string, channel?: string }' },
+];
+
+export function findTool(toolId) {
+  return AGENT_TOOL_CATALOG.find(t => t.id === toolId) || null;
+}
+
+export function groupedTools() {
+  const groups = {};
+  for (const t of AGENT_TOOL_CATALOG) {
+    if (!groups[t.group]) groups[t.group] = [];
+    groups[t.group].push(t);
+  }
+  return groups;
+}
+
+/* Output schema for a variant — what downstream nodes can reference via
+   {{steps.<id>.output.*}}. Visible in the Inspector "Inputs / Outputs" tab so
+   wiring is no longer guesswork. */
+export function getOutputSchema(variantId) {
+  if (variantId === 'agent.autonomous') {
+    return {
+      kind: 'object',
+      fields: [
+        // Top-level routing contract (§1). Every agent emits this shape.
+        { path: 'status',               type: 'enum',       desc: '"ok" | "needs_handoff" | "needs_human" | "failed". Drives downstream routing.' },
+        { path: 'result',               type: 'object',     desc: 'Structured payload, validated against the agent\'s `returns` schema.' },
+        { path: 'handoff.to',           type: 'string?',    desc: 'When status = "needs_handoff", the target agent id.' },
+        { path: 'handoff.reason',       type: 'string?',    desc: 'Why the handoff was issued.' },
+        { path: 'handoff.payload',      type: 'object?',    desc: 'Data to forward to the target agent.' },
+        { path: 'reasoning',            type: 'string?',    desc: 'Optional one-line summary of the agent\'s rationale.' },
+        // Aggregates
+        { path: 'usage.input_tokens',   type: 'number',     desc: 'Input tokens summed across all LLM calls in the loop.' },
+        { path: 'usage.output_tokens',  type: 'number',     desc: 'Output tokens summed across all LLM calls in the loop.' },
+        { path: 'usage.cost_usd',       type: 'number',     desc: 'Aggregate cost in USD for the entire loop.' },
+        { path: 'model_used',           type: 'string',     desc: 'Effective model id.' },
+        { path: 'latency_ms',           type: 'number',     desc: 'Wall-clock latency of the loop.' },
+        // Trace (loop detail) — moved here so top-level stays clean.
+        { path: 'trace.steps',          type: 'agent_step[]', desc: 'Ordered loop: think / tool_call / observation / done.' },
+        { path: 'trace.steps_taken',    type: 'number',     desc: 'Total loop iterations performed.' },
+        { path: 'trace.tools_used',     type: 'string[]',   desc: 'Distinct tool ids the agent invoked at least once.' },
+        { path: 'trace.terminated_by',  type: 'enum',       desc: '"goal_met" | "max_steps" | "budget" | "error" | "stopped"' },
+      ],
+    };
+  }
+  if (variantId === 'llm.chat') {
+    return {
+      kind: 'object',
+      fields: [
+        { path: 'text',                   type: 'string',   desc: 'Final assistant reply (concatenated content blocks).' },
+        { path: 'messages',               type: 'message[]', desc: 'Full updated conversation including the new assistant turn. Pipe into another chat node to continue the thread.' },
+        { path: 'tool_calls',             type: 'toolcall[]', desc: 'Tool invocations the model produced (name + arguments). Empty when finish_reason ≠ "tool_use".' },
+        { path: 'finish_reason',          type: 'enum',     desc: '"stop" | "length" | "tool_use" | "content_filter"' },
+        { path: 'parsed',                 type: 'any',      desc: 'Parsed JSON object when response_format = json_object | json_schema. Otherwise null.' },
+        { path: 'usage.input_tokens',     type: 'number',   desc: 'Tokens billed for input.' },
+        { path: 'usage.output_tokens',    type: 'number',   desc: 'Tokens billed for output.' },
+        { path: 'usage.cache_read_tokens',type: 'number',   desc: 'Tokens served from prompt cache (when prompt_cache = true).' },
+        { path: 'usage.cost_usd',         type: 'number',   desc: 'Estimated cost for this call in USD.' },
+        { path: 'model_used',             type: 'string',   desc: 'Effective model id (may differ from request when fallback fired).' },
+        { path: 'attempts',               type: 'number',   desc: 'Number of attempts including retries.' },
+        { path: 'latency_ms',             type: 'number',   desc: 'Wall-clock latency of the call.' },
+      ],
+    };
+  }
+  if (variantId === 'llm.classify') {
+    return {
+      kind: 'object',
+      fields: [
+        { path: 'label',         type: 'string', desc: 'Predicted class label.' },
+        { path: 'confidence',    type: 'number', desc: '0..1 model confidence.' },
+        { path: 'usage.cost_usd', type: 'number', desc: 'Cost in USD.' },
+      ],
+    };
+  }
+  if (variantId === 'llm.extract') {
+    return {
+      kind: 'object',
+      fields: [
+        { path: 'data',           type: 'object', desc: 'Object matching the JSON schema you supplied.' },
+        { path: 'usage.cost_usd', type: 'number', desc: 'Cost in USD.' },
+      ],
+    };
+  }
+  return null;
+}
+
+/* Migrate older llm.chat params (pre-multiturn). Prior schema had
+   `prompt: string`; new schema uses `messages: [{role, content}]`. We keep
+   migration cheap + idempotent so existing seed/saved workflows keep working. */
+export function migrateLlmChatParams(params = {}) {
+  if (Array.isArray(params.messages) && params.messages.length > 0) return params;
+  if (typeof params.prompt === 'string' && params.prompt.length > 0) {
+    const { prompt, ...rest } = params;
+    return { ...rest, messages: [{ role: 'user', content: prompt }] };
+  }
+  return { ...params, messages: [{ role: 'user', content: '' }] };
 }
 
 export function accentClass(accent, which) {

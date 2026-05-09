@@ -45,9 +45,17 @@ function Node({ span, depth, children, selectedId, onSelect, expanded, onToggle,
 
   return (
     <div>
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => onSelect(span.id)}
-        className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-muted transition-colors text-left ${
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelect(span.id);
+          }
+        }}
+        className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-muted transition-colors text-left cursor-pointer ${
           isSelected ? 'bg-primary/10' : state === 'running' ? 'bg-primary/5' : ''
         }`}
         style={{ paddingLeft: `${8 + depth * 14}px` }}
@@ -84,7 +92,7 @@ function Node({ span, depth, children, selectedId, onSelect, expanded, onToggle,
         {state === 'pending' && (
           <span className="ml-auto text-[9.5px] font-mono text-muted-foreground/60">queued</span>
         )}
-      </button>
+      </div>
       {isOpen && kids.map(c => (
         <Node
           key={c.id}

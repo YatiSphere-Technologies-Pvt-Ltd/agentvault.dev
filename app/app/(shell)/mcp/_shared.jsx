@@ -38,6 +38,7 @@ export function VendorIcon({ vendorId, size = 14 }) {
   switch (v.icon) {
     case 'plug': return <svg {...p}><path d="M7 3v4M13 3v4M5 7h10v4a5 5 0 01-10 0V7zM10 16v2"/></svg>;
     case 'docs': return <svg {...p}><path d="M5 3h7l4 4v10H5V3z"/><path d="M12 3v4h4M8 9h5M8 12h5M8 15h3"/></svg>;
+    case 'db':   return <svg {...p}><ellipse cx="10" cy="5" rx="6" ry="2"/><path d="M4 5v5c0 1.1 2.7 2 6 2s6-.9 6-2V5"/><path d="M4 10v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg>;
     default:     return <svg {...p}><rect x="4" y="4" width="12" height="12" rx="2"/></svg>;
   }
 }

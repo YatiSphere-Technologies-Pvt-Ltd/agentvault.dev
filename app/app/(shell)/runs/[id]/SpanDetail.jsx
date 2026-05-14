@@ -1,14 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { KIND_META } from '../_traces';
 import { fmtMs, spanProgress } from './_replay';
-import { IOView } from './SpanRenderers';
+import { IOView, LLMChatView } from './SpanRenderers';
 
-export default function SpanDetail({ span, currentMs }) {
-  const [tab, setTab] = useState('output');
+export default function SpanDetail({ span, currentMs, onCriticalPath = false }) {
+  const isLLM = span?.kind === 'llm';
+  // LLM spans default to the Chat tab — for agentic traces that's the
+  // most-read view. Other kinds keep Output as before. The default flips
+  // when you switch to a different span kind.
+  const [tab, setTab] = useState(isLLM ? 'chat' : 'output');
+  useEffect(() => {
+    setTab(span?.kind === 'llm' ? 'chat' : 'output');
+  }, [span?.id, span?.kind]);
+
   if (!span) {
     return (
       <div className="p-6 text-center">
@@ -32,6 +41,11 @@ export default function SpanDetail({ span, currentMs }) {
           <Badge variant="outline" className="text-[9.5px]">{kind.label}</Badge>
           <span className="font-mono text-[11px] text-muted-foreground">{span.id}</span>
           {span.status === 'error' && <Badge variant="destructive" className="text-[9.5px]">error</Badge>}
+          {onCriticalPath && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-destructive/40 bg-destructive/10 text-destructive text-[9.5px] font-mono uppercase tracking-[0.14em]">
+              <Flame className="h-3 w-3" /> critical
+            </span>
+          )}
           <span className={`ml-auto inline-flex items-center gap-1 text-[9.5px] font-mono uppercase tracking-[0.14em] ${stateTone}`}>
             {state === 'running' && <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />}
             {state}
@@ -49,6 +63,7 @@ export default function SpanDetail({ span, currentMs }) {
       <Tabs value={tab} onValueChange={setTab} className="flex-1 min-h-0 flex flex-col">
         <div className="px-4 pt-2 shrink-0">
           <TabsList className="h-8 bg-muted/60">
+            {isLLM && <TabsTrigger value="chat"   className="text-[11.5px]">Chat</TabsTrigger>}
             <TabsTrigger value="output"     className="text-[11.5px]">Output</TabsTrigger>
             <TabsTrigger value="input"      className="text-[11.5px]">Input</TabsTrigger>
             <TabsTrigger value="attributes" className="text-[11.5px]">Attributes</TabsTrigger>
@@ -56,6 +71,11 @@ export default function SpanDetail({ span, currentMs }) {
           </TabsList>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
+          {isLLM && (
+            <TabsContent value="chat">
+              <LLMChatView span={span} currentMs={currentMs} />
+            </TabsContent>
+          )}
           <TabsContent value="output">
             {state === 'pending' ? (
               <EmptyHint>Not produced yet — span hasn&apos;t started in replay.</EmptyHint>

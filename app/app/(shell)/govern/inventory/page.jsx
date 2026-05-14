@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Layers } from 'lucide-react';
+import { Search, Layers, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DataTable } from '@/components/tables/DataTable';
@@ -153,7 +154,10 @@ export default function InventoryPage() {
 
   return (
     <>
-      <GovernHeader />
+      <GovernHeader
+        title="AI Inventory"
+        subtitle="Every AI asset in the workspace — agents, SaaS apps, copilots, model endpoints, and unmanaged Shadow AI. Apply approval state, owner, and policy from a single ledger."
+      />
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-5">
         <div className="flex items-end justify-between gap-3 flex-wrap">
           <div>
@@ -165,6 +169,14 @@ export default function InventoryPage() {
               join key for events, policies, and audit reports.
             </p>
           </div>
+          <Button
+            size="sm"
+            render={
+              <Link href="/app/govern/inventory/new">
+                <Plus className="h-3.5 w-3.5" /> Add asset
+              </Link>
+            }
+          />
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

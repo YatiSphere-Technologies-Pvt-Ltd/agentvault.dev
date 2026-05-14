@@ -7,7 +7,7 @@ import {
   CheckCircle2, AlertOctagon, Sparkles, FileSearch,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { GovernHeader, RuntimeSubNav } from '../_shared';
+import { GovernHeader } from '../_shared';
 import { useDlpRules, useGatewayConfig, compileGatewayBundle, deployGateway } from '../_store';
 
 /* Runtime overview — the landing page for the gateway + DLP product area.
@@ -38,8 +38,10 @@ export default function RuntimeOverviewPage() {
 
   return (
     <>
-      <GovernHeader />
-      <RuntimeSubNav />
+      <GovernHeader
+        title="Runtime control"
+        subtitle="Enforce policy on every AI request in flight — DLP redaction, prompt-injection screens, model routing through the AI gateway. The control plane between your users and the model."
+      />
 
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6">
         {/* Gateway status hero */}
@@ -124,11 +126,14 @@ function GatewayHero({ gw, stats }) {
   const lastDeployedAgo = gw.last_deployed_at ? fmtAgo(gw.last_deployed_at) : '—';
   const compiledAfterDeploy = gw.last_compiled_at && gw.last_deployed_at && gw.last_compiled_at > gw.last_deployed_at;
 
+  // Calm white card with a teal top-accent (gateway deployed = healthy
+  // state). The previous all-red panel made every runtime page look
+  // alarming even when the gateway was fine.
   return (
-    <div className="rounded-xl border border-destructive/30 bg-destructive/[0.03] overflow-hidden">
+    <div className="rounded-xl border border-border border-t-2 border-t-(--brand-teal) bg-card overflow-hidden">
       <div className="px-5 py-4 flex items-start justify-between gap-5 flex-wrap">
         <div className="flex items-start gap-3 min-w-0">
-          <div className="h-12 w-12 rounded-md bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
+          <div className="h-12 w-12 rounded-md bg-(--brand-teal)/12 text-brand-teal flex items-center justify-center shrink-0">
             <Gauge className="h-6 w-6" />
           </div>
           <div className="min-w-0">
@@ -143,7 +148,7 @@ function GatewayHero({ gw, stats }) {
                 bundle {gw.bundle_size_kb || 0} KB · {stats.enabled} rules
               </span>
               {compiledAfterDeploy && (
-                <span className="inline-flex items-center gap-1 text-primary font-mono">
+                <span className="inline-flex items-center gap-1 text-(--chart-3) font-mono">
                   · <AlertOctagon className="h-3 w-3" /> pending redeploy
                 </span>
               )}
@@ -153,13 +158,13 @@ function GatewayHero({ gw, stats }) {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 shrink-0">
           <HeroStat label="Block"  value={stats.byAction.block  || 0} color="var(--destructive)" />
-          <HeroStat label="Redact" value={stats.byAction.redact || 0} color="var(--accent)" />
-          <HeroStat label="Warn"   value={stats.byAction.warn   || 0} color="var(--accent)" />
+          <HeroStat label="Redact" value={stats.byAction.redact || 0} color="#D97706" />
+          <HeroStat label="Warn"   value={stats.byAction.warn   || 0} color="#F59E0B" />
           <HeroStat label="Log"    value={stats.byAction.log    || 0} color="var(--muted-foreground)" />
         </div>
       </div>
 
-      <div className="px-5 py-3 border-t border-destructive/15 bg-destructive/[0.02] flex items-center gap-2 flex-wrap">
+      <div className="px-5 py-3 border-t border-border bg-muted/30 flex items-center gap-2 flex-wrap">
         <span className="text-[11.5px] text-foreground/85">
           {stats.hits7d.toLocaleString()} policy actions enforced in the last 7 days
           {stats.critical > 0 && (
@@ -170,7 +175,7 @@ function GatewayHero({ gw, stats }) {
           <Button size="sm" variant="outline" onClick={() => compileGatewayBundle()}>
             <Sparkles className="h-3.5 w-3.5" /> Compile bundle
           </Button>
-          <Button size="sm" onClick={() => deployGateway()} className="bg-destructive text-destructive-foreground hover:brightness-110">
+          <Button size="sm" onClick={() => deployGateway()}>
             Redeploy
           </Button>
           <Link href="/app/govern/runtime/gateway">
@@ -211,13 +216,13 @@ function ActionBadge({ action }) {
 
 function SeverityChip({ severity }) {
   if (!severity) return null;
-  const tone = severity === 'critical' ? 'destructive' : severity === 'high' ? 'primary' : severity === 'medium' ? 'accent' : 'muted';
-  const cls = tone === 'destructive' ? 'border-destructive/40 text-destructive bg-destructive/10'
-            : tone === 'primary'     ? 'border-primary/40 text-primary bg-primary/10'
-            : tone === 'accent'      ? 'border-accent/40 text-accent bg-accent/10'
-            : 'border-border text-muted-foreground bg-muted/40';
+  const dot = severity === 'critical' ? 'var(--destructive)'
+            : severity === 'high'     ? '#F59E0B'
+            : severity === 'medium'   ? 'var(--primary)'
+            : 'var(--muted-foreground)';
   return (
-    <span className={`text-[9.5px] font-mono uppercase tracking-[0.12em] px-1.5 py-0.5 rounded border ${cls}`}>
+    <span className="inline-flex items-center gap-1 text-[9.5px] font-mono uppercase tracking-[0.12em] px-1.5 py-0.5 rounded border border-border bg-muted/60 text-foreground">
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: dot }} />
       {severity}
     </span>
   );

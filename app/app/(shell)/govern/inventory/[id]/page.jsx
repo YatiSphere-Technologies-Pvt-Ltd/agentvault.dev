@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useMemo } from 'react';
-import { ArrowLeft, ShieldCheck, Ban, AlertTriangle, Activity, Users, Database, Gauge } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Ban, AlertTriangle, Activity, Users, Database, Gauge, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GovernHeader, RiskPill, ApprovalPill, AssetTypePill, DestinationPill, DecisionPill, fmtAgo, fmtNum, fmtKb } from '../../_shared';
-import { useAssets, useEvents, useDlpRules, approveAsset, quarantineAsset, blockAsset, setRiskClass } from '../../_store';
+import { useAssets, useEvents, useDlpRules, approveAsset, quarantineAsset, blockAsset, setRiskClass, removeAsset } from '../../_store';
 import { RISK_CLASSES } from '../../_connectorCatalog';
 
 export default function AssetDetailPage() {
@@ -42,7 +42,7 @@ export default function AssetDetailPage() {
   if (!asset) {
     return (
       <>
-        <GovernHeader />
+        <GovernHeader title="AI Inventory" />
         <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7">
           <div className="rounded-lg border border-dashed border-border bg-card px-6 py-10 text-center">
             <div className="text-[13px] font-medium text-foreground">Asset not found</div>
@@ -57,7 +57,7 @@ export default function AssetDetailPage() {
 
   return (
     <>
-      <GovernHeader />
+      <GovernHeader title="AI Inventory" />
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-5">
         <Link href="/app/govern/inventory" className="text-[12px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
           <ArrowLeft className="h-3.5 w-3.5" /> All assets
@@ -79,15 +79,45 @@ export default function AssetDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <Button variant="outline" size="sm" render={
+              <Link href={`/app/govern/inventory/${asset.id}/edit`}>
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </Link>
+            } />
             <Button variant="outline" size="sm" onClick={() => approveAsset(asset.id)}>
               <ShieldCheck className="h-3.5 w-3.5" /> Approve
             </Button>
-            <Button variant="outline" size="sm" onClick={() => quarantineAsset(asset.id)} className="border-accent/40 text-accent hover:bg-accent/10">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => quarantineAsset(asset.id)}
+              className="border-(--chart-3)/40 text-(--chart-3) hover:bg-(--chart-3)/10"
+            >
               <AlertTriangle className="h-3.5 w-3.5" /> Quarantine
             </Button>
-            <Button variant="outline" size="sm" onClick={() => blockAsset(asset.id)} className="border-destructive/40 text-destructive hover:bg-destructive/10">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => blockAsset(asset.id)}
+              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+            >
               <Ban className="h-3.5 w-3.5" /> Block
             </Button>
+            {asset.discovered_via === 'manual' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (confirm(`Delete "${asset.name}" from inventory? This action cannot be undone.`)) {
+                    removeAsset(asset.id);
+                    router.push('/app/govern/inventory');
+                  }
+                }}
+                className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </Button>
+            )}
           </div>
         </div>
 
@@ -119,7 +149,7 @@ export default function AssetDetailPage() {
                       {(e.categories || []).length > 0 && (
                         <div className="mt-1 flex items-center gap-1 flex-wrap">
                           {e.categories.map(c => (
-                            <span key={c} className="text-[9.5px] font-mono px-1.5 py-0.5 rounded border border-destructive/40 bg-destructive/[0.06] text-destructive">
+                            <span key={c} className="text-[9.5px] font-mono px-1.5 py-0.5 rounded border border-border bg-muted/60 text-foreground">
                               {c}
                             </span>
                           ))}
@@ -137,7 +167,8 @@ export default function AssetDetailPage() {
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {asset.data_categories.map(c => (
-                    <span key={c} className="text-[11px] font-mono px-2 py-1 rounded border border-destructive/40 bg-destructive/[0.06] text-destructive">
+                    <span key={c} className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-1 rounded border border-border bg-muted/60 text-foreground">
+                      <span className="h-1.5 w-1.5 rounded-full bg-(--chart-3) shrink-0" />
                       {c}
                     </span>
                   ))}
@@ -201,7 +232,7 @@ export default function AssetDetailPage() {
                       href={`/app/govern/runtime/dlp/${r.id}`}
                       className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-border bg-background hover:border-primary/40 hover:bg-primary/[0.03] transition-colors"
                     >
-                      <Gauge className="h-3 w-3 text-destructive shrink-0" />
+                      <Gauge className="h-3 w-3 text-primary shrink-0" />
                       <span className="text-[11.5px] font-medium text-foreground truncate flex-1">{r.name}</span>
                       <span className="text-[9.5px] font-mono uppercase tracking-[0.12em] text-muted-foreground shrink-0">{r.action}</span>
                     </Link>
@@ -255,7 +286,7 @@ function Field({ label, children }) {
 
 function Stat({ label, value, sub, tone = 'default', icon }) {
   const color = tone === 'bad'  ? 'text-destructive'
-              : tone === 'warn' ? 'text-primary'
+              : tone === 'warn' ? 'text-(--chart-3)'
               : tone === 'ok'   ? 'text-brand-teal'
               :                   'text-foreground';
   return (

@@ -50,17 +50,30 @@ const PILLARS = [
     builtFor: ["Integration eng", "Ops"],
   },
   {
-    key: "governance",
+    key: "observability",
     number: "04",
-    label: "Observability & Governance",
-    kicker: "The control plane",
-    tagline: "Policy-as-code. Logs you can show auditors.",
+    label: "Observability & Evaluation",
+    kicker: "The visibility layer",
+    tagline: "Replay any run. Audit any decision.",
     specs: [
       ["Trace retention", "18 months"],
-      ["Policy lang",     "Cedar"],
-      ["Evidence export", "SOC 2 · ISO"],
+      ["Replay",          "Deterministic"],
+      ["Cost attribution","Per node"],
     ],
-    builtFor: ["Risk · Security", "Compliance"],
+    builtFor: ["Platform eng", "SRE"],
+  },
+  {
+    key: "govern",
+    number: "05",
+    label: "AI Governance & Trust",
+    kicker: "The control plane",
+    tagline: "Discover Shadow AI · DLP at the gateway · Red-team · Evidence.",
+    specs: [
+      ["Attacks",        "2,000+"],
+      ["Frameworks",     "12+"],
+      ["Discovery srcs", "14"],
+    ],
+    builtFor: ["CISO · Risk", "Compliance"],
   },
 ];
 
@@ -72,7 +85,7 @@ export default function PlatformPillars() {
           <div className="max-w-170">
             <Eyebrow label="The platform" />
             <h2 className="mt-4 text-[32px] lg:text-[42px] leading-[1.08] font-semibold tracking-tight text-foreground">
-              Four pillars. One control plane<br className="hidden md:inline" /> for every AI workload.
+              Five pillars. One control plane<br className="hidden md:inline" /> for every AI workload.
             </h2>
           </div>
           <p className="max-w-90 text-[13.5px] leading-relaxed text-muted-foreground">

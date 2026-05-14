@@ -89,7 +89,10 @@ export default function DiscoveryPage() {
 
   return (
     <>
-      <GovernHeader />
+      <GovernHeader
+        title="Discovery feed"
+        subtitle="Live stream of AI activity observed across monitored egress, identity, and SaaS connectors — including unmanaged Shadow AI usage. Triage, approve, or quarantine assets before they become audit findings."
+      />
 
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-5">
         <div className="flex items-end justify-between gap-3 flex-wrap">
@@ -195,7 +198,7 @@ function EventRow({ event, asset, expanded, onToggle }) {
           {/* Categories + asset link */}
           <div className="mt-1 flex items-center gap-1.5 flex-wrap">
             {(event.categories || []).map(c => (
-              <span key={c} className="text-[9.5px] font-mono px-1.5 py-0.5 rounded border border-destructive/40 bg-destructive/[0.06] text-destructive">
+              <span key={c} className="text-[9.5px] font-mono px-1.5 py-0.5 rounded border border-border bg-muted/60 text-foreground">
                 {c}
               </span>
             ))}
@@ -220,7 +223,7 @@ function EventRow({ event, asset, expanded, onToggle }) {
             <div className="rounded border border-border bg-muted/30 px-3 py-2 text-[12px] text-foreground font-mono whitespace-pre-wrap leading-relaxed">
               {event.preview}
               {event.decision === 'redact' && (
-                <span className="block mt-2 text-[10.5px] text-accent">↳ DLP rewrote the prompt; the redacted version was forwarded.</span>
+                <span className="block mt-2 text-[10.5px] text-(--chart-3)">↳ DLP rewrote the prompt; the redacted version was forwarded.</span>
               )}
               {event.decision === 'block' && (
                 <span className="block mt-2 text-[10.5px] text-destructive">↳ Blocked at gateway. The user saw a policy banner.</span>
@@ -259,7 +262,7 @@ function EventRow({ event, asset, expanded, onToggle }) {
 
 function Stat({ label, value, sub, tone = 'default' }) {
   const color = tone === 'bad'  ? 'text-destructive'
-              : tone === 'warn' ? 'text-primary'
+              : tone === 'warn' ? 'text-(--chart-3)'
               : tone === 'ok'   ? 'text-brand-teal'
               :                   'text-foreground';
   return (

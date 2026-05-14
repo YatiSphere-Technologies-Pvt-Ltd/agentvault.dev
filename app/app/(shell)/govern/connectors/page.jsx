@@ -126,15 +126,13 @@ export default function ConnectorsPage() {
         if (!c.isLive) {
           return <span className="text-[10.5px] font-mono text-muted-foreground">—</span>;
         }
-        const tone = c.health === 'red' ? 'destructive'
-                  : c.health === 'yellow' ? 'primary'
-                  : 'brand-teal';
-        const cls = tone === 'destructive' ? 'border-destructive/40 text-destructive bg-destructive/10'
-                  : tone === 'primary' ? 'border-primary/40 text-primary bg-primary/10'
-                  : 'border-(--brand-teal)/40 text-brand-teal bg-(--brand-teal)/10';
+        const dot = c.health === 'red'    ? 'var(--destructive)'
+                  : c.health === 'yellow' ? '#F59E0B'
+                  : 'var(--brand-teal)';
+        const pulse = c.health === 'yellow' ? 'animate-pulse-dot' : '';
         return (
-          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-mono uppercase tracking-[0.12em] ${cls}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${tone === 'destructive' ? 'bg-destructive' : tone === 'primary' ? 'bg-primary animate-pulse-dot' : 'bg-brand-teal'}`} />
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-muted/60 text-[10px] font-mono uppercase tracking-[0.12em] text-foreground">
+            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${pulse}`} style={{ background: dot }} />
             {c.status}
           </span>
         );
@@ -195,7 +193,10 @@ export default function ConnectorsPage() {
 
   return (
     <>
-      <GovernHeader />
+      <GovernHeader
+        title="Connectors"
+        subtitle="Plug AgentVault into the systems where AI activity lives — identity, egress, SaaS, model providers. Each connector hydrates discovery, inventory, and the runtime gateway."
+      />
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-5">
         <div className="flex items-end justify-between gap-3 flex-wrap">
           <div>
@@ -258,7 +259,7 @@ export default function ConnectorsPage() {
 
 function Stat({ label, value, sub, tone = 'default', icon }) {
   const color = tone === 'bad'  ? 'text-destructive'
-              : tone === 'warn' ? 'text-primary'
+              : tone === 'warn' ? 'text-(--chart-3)'
               : tone === 'ok'   ? 'text-brand-teal'
               :                   'text-foreground';
   return (

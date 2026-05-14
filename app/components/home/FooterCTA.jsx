@@ -38,7 +38,7 @@ export default function FooterCTA() {
 
       {/* Footer */}
       <footer className="border-t border-border bg-hero-bg">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-14 grid grid-cols-2 md:grid-cols-6 gap-8">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-14 grid grid-cols-2 md:grid-cols-7 gap-8">
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-2.5 text-foreground text-[15px] font-semibold tracking-tight">
               <VaultMark />
@@ -56,31 +56,42 @@ export default function FooterCTA() {
           </div>
 
           <FooterCol title="Platform" links={[
-            ["Agent Orchestration", "/platform"],
-            ["Context Engine", "/platform#context"],
-            ["Integrations", "/platform#integrations"],
-            ["Observability", "/platform#observability"],
+            ["Agent Orchestration", "/platform#orchestration"],
+            ["Context Engine",      "/platform#context"],
+            ["Integrations",        "/platform#integrations"],
+            ["Observability",       "/platform#observability"],
+            ["Approvals (HITL)",    "/platform#approvals"],
+          ]} />
+
+          <FooterCol title="Govern" links={[
+            ["Shadow AI Discovery", "/govern#discovery"],
+            ["AI Inventory",        "/govern#inventory"],
+            ["Runtime Control",     "/govern#runtime"],
+            ["Red Team",            "/govern#redteam"],
+            ["Compliance Evidence", "/govern#compliance"],
           ]} />
 
           <FooterCol title="Solutions" links={[
-            ["GRC Suite", "/solutions#grc"],
-            ["KYC Intelligence", "/solutions#kyc"],
-            ["Workforce", "/solutions#workforce"],
-            ["Context Engine", "/solutions#context"],
+            ["Govern Suite",     "/solutions/govern"],
+            ["GRC Suite",        "/solutions/grc"],
+            ["KYC Intelligence", "/solutions/kyc"],
+            ["Workforce",        "/solutions/workforce"],
+            ["Context Engine",   "/solutions/context"],
           ]} />
 
           <FooterCol title="Developers" links={[
-            ["Documentation", "/developers"],
-            ["SDKs", "/developers#sdk"],
-            ["API reference", "/developers#api"],
-            ["Changelog", "/developers#changelog"],
+            ["Documentation",  "/developers"],
+            ["SDKs",           "/developers#sdk"],
+            ["API reference",  "/developers#api"],
+            ["Red Team API",   "/developers#redteam"],
+            ["Changelog",      "/developers#changelog"],
           ]} />
 
           <FooterCol title="Company" links={[
-            ["About", "/company"],
+            ["About",     "/company"],
             ["Customers", "/company#customers"],
-            ["Security", "/company#security"],
-            ["Contact", "/company#contact"],
+            ["Security",  "/company#security"],
+            ["Contact",   "/company#contact"],
           ]} />
         </div>
 

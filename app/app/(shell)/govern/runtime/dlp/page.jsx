@@ -6,7 +6,7 @@ import { Search, ShieldAlert } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { DataTable } from '@/components/tables/DataTable';
 import { FacetFilterBar } from '@/components/tables/FacetFilter';
-import { GovernHeader, RuntimeSubNav } from '../../_shared';
+import { GovernHeader } from '../../_shared';
 import { useDlpRules, toggleDlpRule } from '../../_store';
 
 const ACTION_OPTIONS = [
@@ -155,8 +155,10 @@ export default function DlpRulesPage() {
 
   return (
     <>
-      <GovernHeader />
-      <RuntimeSubNav />
+      <GovernHeader
+        title="DLP rules"
+        subtitle="Pattern, classifier, and prompt-injection rules applied to every request the AI gateway sees. Tune severity, action, and scope per workspace."
+      />
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-5">
         <div className="flex items-end justify-between gap-3 flex-wrap">
           <div>
@@ -215,38 +217,33 @@ export default function DlpRulesPage() {
 }
 
 function ActionPill({ action }) {
-  const tone = action === 'block' ? 'destructive'
-             : action === 'redact' ? 'accent'
-             : action === 'warn' ? 'accent'
-             : 'muted';
-  const cls = tone === 'destructive' ? 'border-destructive/40 text-destructive bg-destructive/10'
-            : tone === 'accent'      ? 'border-accent/40 text-accent bg-accent/10'
-            : 'border-border text-muted-foreground bg-muted/40';
+  const dot = action === 'block'  ? 'var(--destructive)'
+            : action === 'redact' ? '#D97706'
+            : action === 'warn'   ? '#F59E0B'
+            : 'var(--muted-foreground)';
   return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-mono uppercase tracking-[0.12em] ${cls}`}>
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-muted/60 text-[10px] font-mono uppercase tracking-[0.12em] text-foreground">
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: dot }} />
       {action}
     </span>
   );
 }
 function SeverityPill({ severity }) {
   if (!severity) return null;
-  const tone = severity === 'critical' ? 'destructive'
-             : severity === 'high'     ? 'primary'
-             : severity === 'medium'   ? 'accent'
-             : 'muted';
-  const cls = tone === 'destructive' ? 'border-destructive/40 text-destructive bg-destructive/10'
-            : tone === 'primary'     ? 'border-primary/40 text-primary bg-primary/10'
-            : tone === 'accent'      ? 'border-accent/40 text-accent bg-accent/10'
-            : 'border-border text-muted-foreground bg-muted/40';
+  const dot = severity === 'critical' ? 'var(--destructive)'
+            : severity === 'high'     ? '#F59E0B'
+            : severity === 'medium'   ? 'var(--primary)'
+            : 'var(--muted-foreground)';
   return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-mono uppercase tracking-[0.12em] ${cls}`}>
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-muted/60 text-[10px] font-mono uppercase tracking-[0.12em] text-foreground">
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: dot }} />
       {severity}
     </span>
   );
 }
 function Stat({ label, value, sub, tone = 'default', icon }) {
   const color = tone === 'bad'  ? 'text-destructive'
-              : tone === 'warn' ? 'text-primary'
+              : tone === 'warn' ? 'text-(--chart-3)'
               : tone === 'ok'   ? 'text-brand-teal'
               :                   'text-foreground';
   return (

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { FileSearch, Sparkles, Ban, AlertTriangle, ShieldCheck, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { GovernHeader, RuntimeSubNav } from '../../_shared';
+import { GovernHeader } from '../../_shared';
 import { useDlpRules } from '../../_store';
 import { inspect, SAMPLE_PROMPTS } from '../../_dlpEngine';
 
@@ -18,10 +18,14 @@ import { inspect, SAMPLE_PROMPTS } from '../../_dlpEngine';
      - See the redacted prompt that would actually be forwarded
      - Toggle individual rules to see how the decision flips */
 
+/* `var(--accent)` was used here but it's parchment-muted on the current
+   theme — text rendered with it was effectively invisible. Switched to
+   semantic amber/dark-amber and reserved `--destructive` for genuinely
+   critical PII categories + prompt injection. */
 const DECISION_TONE = {
   allow:  { color: 'var(--brand-teal)',  label: 'Allowed',  icon: ShieldCheck },
-  warn:   { color: 'var(--accent)',      label: 'Warned',   icon: AlertTriangle },
-  redact: { color: 'var(--accent)',      label: 'Redacted', icon: EyeOff },
+  warn:   { color: '#F59E0B',            label: 'Warned',   icon: AlertTriangle },
+  redact: { color: '#D97706',            label: 'Redacted', icon: EyeOff },
   block:  { color: 'var(--destructive)', label: 'Blocked',  icon: Ban },
   log:    { color: 'var(--muted-foreground)', label: 'Logged', icon: ShieldCheck },
 };
@@ -31,9 +35,9 @@ const CATEGORY_TONE = {
   'customer-pii':      'var(--destructive)',
   'financial':         'var(--destructive)',
   'health-phi':        'var(--destructive)',
-  'source-code':       'var(--accent)',
-  'legal':             'var(--accent)',
-  'contracts':         'var(--accent)',
+  'source-code':       '#D97706', // dark amber
+  'legal':             '#D97706',
+  'contracts':         '#D97706',
   'business-strategy': 'var(--primary)',
   'prompt-injection':  'var(--destructive)',
   'employee-data':     'var(--primary)',
@@ -73,14 +77,16 @@ export default function InspectorPage() {
 
   return (
     <>
-      <GovernHeader />
-      <RuntimeSubNav />
+      <GovernHeader
+        title="Prompt Inspector"
+        subtitle="Paste a prompt to preview exactly which DLP rules fire, what gets redacted, and what the gateway would forward to the model. Run live against the rule bundle."
+      />
 
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-5">
         <div>
           <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-mono">Runtime</div>
           <h2 className="text-[16px] font-semibold text-foreground mt-0.5 inline-flex items-center gap-2">
-            <FileSearch className="h-4 w-4 text-destructive" /> Prompt Inspector
+            <FileSearch className="h-4 w-4 text-primary" /> Prompt Inspector
           </h2>
           <p className="text-[12.5px] text-muted-foreground mt-0.5 max-w-[80ch]">
             Paste a prompt below. The same engine that runs at the AI gateway evaluates it locally —
@@ -176,7 +182,7 @@ export default function InspectorPage() {
                 {activeRules.map(r => {
                   const fired = result.rules_fired.some(f => f.rule_id === r.id);
                   return (
-                    <li key={r.id} className={`px-3 py-2 flex items-center gap-2 ${fired ? 'bg-destructive/[0.03]' : ''}`}>
+                    <li key={r.id} className={`px-3 py-2 flex items-center gap-2 ${fired ? 'bg-(--chart-3)/[0.06]' : ''}`}>
                       <input
                         type="checkbox"
                         checked={r.enabled}
@@ -195,7 +201,8 @@ export default function InspectorPage() {
                         </div>
                       </Link>
                       {fired && (
-                        <span className="text-[9.5px] font-mono uppercase tracking-[0.12em] px-1.5 py-0.5 rounded border border-destructive/40 bg-destructive/10 text-destructive shrink-0">
+                        <span className="inline-flex items-center gap-1 text-[9.5px] font-mono uppercase tracking-[0.12em] px-1.5 py-0.5 rounded border border-border bg-muted/60 text-foreground shrink-0">
+                          <span className="h-1.5 w-1.5 rounded-full shrink-0 bg-destructive" />
                           fired
                         </span>
                       )}

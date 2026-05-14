@@ -43,7 +43,10 @@ export default function GovernOverviewPage() {
 
   return (
     <>
-      <GovernHeader />
+      <GovernHeader
+        title="AI Governance & Control"
+        subtitle={<>Discover every AI asset across the organization — internal agents, approved SaaS, Copilot seats, and unmanaged Shadow AI. Apply policy, enforce DLP at the gateway, and answer the audit question: <em>who used which model on which data?</em></>}
+      />
 
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6">
         {/* Risk score hero — the one number the board wants */}
@@ -110,7 +113,7 @@ export default function GovernOverviewPage() {
                         {(a.data_categories || []).length > 0 && (
                           <div className="mt-1 flex items-center gap-1 flex-wrap">
                             {a.data_categories.map(c => (
-                              <span key={c} className="text-[9.5px] font-mono px-1.5 py-0.5 rounded border border-destructive/40 bg-destructive/[0.06] text-destructive">
+                              <span key={c} className="text-[9.5px] font-mono px-1.5 py-0.5 rounded border border-border bg-muted/60 text-foreground">
                                 {c}
                               </span>
                             ))}
@@ -179,21 +182,26 @@ export default function GovernOverviewPage() {
 /* ─────────── building blocks ─────────── */
 
 function RiskHero({ score, approval }) {
+  // bad = high risk score → red is the alarm (kept). warn → amber (was indigo
+  // which read as "informational" not "warn"). ok → teal.
   const tone = score >= 60 ? 'bad' : score >= 30 ? 'warn' : 'ok';
-  const color = tone === 'bad' ? 'text-destructive' : tone === 'warn' ? 'text-primary' : 'text-brand-teal';
-  const ring = tone === 'bad' ? 'border-destructive/40 bg-destructive/[0.04]'
-             : tone === 'warn' ? 'border-primary/40 bg-primary/[0.04]'
-             : 'border-(--brand-teal)/40 bg-(--brand-teal)/[0.04]';
+  const numberColor = tone === 'bad' ? 'text-destructive' : tone === 'warn' ? 'text-foreground' : 'text-brand-teal';
+  // Container reads as a calm white card with a thin colored top-border accent
+  // instead of a saturated tinted background. Keeps the page palette neutral.
+  const accentBorder = tone === 'bad' ? 'border-t-destructive' : tone === 'warn' ? 'border-t-(--chart-3)' : 'border-t-(--brand-teal)';
+  const iconBg = tone === 'bad' ? 'bg-destructive/10 text-destructive'
+              : tone === 'warn' ? 'bg-(--chart-3)/15 text-foreground'
+              : 'bg-(--brand-teal)/12 text-brand-teal';
   return (
-    <div className={`rounded-xl border ${ring} px-5 py-4 flex items-center gap-5 flex-wrap`}>
+    <div className={`rounded-xl border border-border ${accentBorder} border-t-2 bg-card px-5 py-4 flex items-center gap-5 flex-wrap`}>
       <div className="flex items-center gap-3 min-w-0">
-        <div className={`h-12 w-12 rounded-md flex items-center justify-center ${tone === 'bad' ? 'bg-destructive/15' : tone === 'warn' ? 'bg-primary/15' : 'bg-(--brand-teal)/15'}`}>
-          <ShieldAlert className={`h-6 w-6 ${color}`} />
+        <div className={`h-12 w-12 rounded-md flex items-center justify-center ${iconBg}`}>
+          <ShieldAlert className="h-6 w-6" />
         </div>
         <div>
           <div className="text-[10.5px] uppercase tracking-[0.16em] font-mono text-muted-foreground">AI risk score</div>
           <div className="flex items-baseline gap-2">
-            <span className={`text-[36px] font-semibold tabular-nums leading-none ${color}`}>{score}</span>
+            <span className={`text-[36px] font-semibold tabular-nums leading-none ${numberColor}`}>{score}</span>
             <span className="text-[12px] font-mono text-muted-foreground">/ 100</span>
           </div>
         </div>
@@ -221,21 +229,26 @@ function RiskHero({ score, approval }) {
 }
 
 function Pill({ label, value, tone }) {
-  const cls = tone === 'ok'   ? 'border-(--brand-teal)/40 text-brand-teal bg-(--brand-teal)/10'
-            : tone === 'warn' ? 'border-primary/40 text-primary bg-primary/10'
-            : tone === 'bad'  ? 'border-destructive/40 text-destructive bg-destructive/10'
-            : 'border-border text-muted-foreground bg-muted/40';
+  const dot = tone === 'ok'   ? 'var(--brand-teal)'
+            : tone === 'warn' ? '#F59E0B'
+            : tone === 'bad'  ? 'var(--destructive)'
+            : 'var(--muted-foreground)';
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-medium ${cls}`}>
+    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border bg-muted/60 text-[11px] font-medium text-foreground">
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: dot }} />
       <span className="font-mono tabular-nums">{value}</span>
-      <span className="opacity-80">{label}</span>
+      <span className="text-muted-foreground">{label}</span>
     </span>
   );
 }
 
 function QuestionCard({ question, value, sub, href, cta, tone = 'default' }) {
+  // Number color is the only place tone shows up. Red is reserved for
+  // genuine alarm (tone='bad'). 'warn' now uses chart-3 amber so it reads
+  // distinct from the neutral default — indigo previously made warn look
+  // like a primary CTA rather than a warning.
   const color = tone === 'bad' ? 'text-destructive'
-              : tone === 'warn' ? 'text-primary'
+              : tone === 'warn' ? 'text-(--chart-3)'
               : tone === 'ok' ? 'text-brand-teal'
               : 'text-foreground';
   return (
@@ -279,22 +292,28 @@ function DepartmentTile({ dept, d }) {
   // Map heat → 0..1 over a sensible range for the demo.
   const norm = Math.min(1, heat / 12);
   const tone = norm > 0.6 ? 'bad' : norm > 0.3 ? 'warn' : 'ok';
-  const cls = tone === 'bad'  ? 'border-destructive/30 bg-destructive/[0.05]'
-            : tone === 'warn' ? 'border-primary/30 bg-primary/[0.05]'
-            : 'border-(--brand-teal)/30 bg-(--brand-teal)/[0.04]';
+  // Tile bg is always neutral white card; the heat signal lives in the
+  // progress bar at the bottom and the thin top accent. Avoids
+  // red-on-red text-contrast issues inside the tile body.
+  const accentBorder = tone === 'bad' ? 'border-t-destructive'
+                     : tone === 'warn' ? 'border-t-(--chart-3)'
+                     : 'border-t-(--brand-teal)';
+  const barColor = tone === 'bad' ? 'bg-destructive'
+                 : tone === 'warn' ? 'bg-(--chart-3)'
+                 : 'bg-brand-teal';
   return (
-    <div className={`rounded-md border ${cls} px-3 py-2.5`}>
+    <div className={`rounded-md border border-border ${accentBorder} border-t-2 bg-card px-3 py-2.5`}>
       <div className="flex items-center justify-between mb-1">
         <span className="text-[12.5px] font-medium text-foreground truncate">{dept}</span>
         <span className="text-[10.5px] font-mono tabular-nums text-muted-foreground">{d.count}</span>
       </div>
       <div className="text-[10.5px] font-mono text-muted-foreground">
         {d.restricted > 0 && <span className="text-destructive">{d.restricted} restricted · </span>}
-        {d.high > 0      && <span className="text-primary">{d.high} high · </span>}
+        {d.high > 0      && <span className="text-(--chart-3)">{d.high} high · </span>}
         {fmtNum(d.users7d)} users · {fmtNum(d.traffic7d)} ev
       </div>
       <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
-        <div className={`h-full ${tone === 'bad' ? 'bg-destructive' : tone === 'warn' ? 'bg-primary' : 'bg-brand-teal'}`}
+        <div className={`h-full ${barColor}`}
              style={{ width: `${Math.max(8, norm * 100)}%` }} />
       </div>
     </div>

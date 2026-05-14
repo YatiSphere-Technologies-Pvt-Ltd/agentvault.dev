@@ -34,22 +34,50 @@ const BUILD_NAV = [
   { href: '/app/approvals',  label: 'Approvals',    icon: 'approvals' },
 ];
 
+/* Govern nav uses *section headers* + collapsible groups. Section labels
+   keep the list scannable; the Runtime control item is a collapsible group
+   whose four children (Overview / DLP rules / AI gateway / Prompt
+   Inspector) replace what used to be an in-page tab strip.
+
+   Items with `kind: 'section'` render as muted section labels, not links.
+   `exact: true` means the row is active only when the pathname matches
+   exactly — used for /app/redteam vs /app/redteam/library (the library is
+   a separate top-level item, not a child of the Red Team landing). */
 const GOVERN_NAV = [
-  { href: '/app/govern',             label: 'Overview',     icon: 'eye' },
-  { href: '/app/govern/discovery',   label: 'Discovery',    icon: 'activity' },
-  { href: '/app/govern/inventory',   label: 'AI Inventory', icon: 'layers' },
+  { href: '/app/govern', label: 'Overview', icon: 'eye' },
+
+  { kind: 'section', label: 'Inventory' },
+  { href: '/app/govern/discovery', label: 'Discovery feed', icon: 'activity' },
+  { href: '/app/govern/inventory', label: 'AI Inventory',   icon: 'layers'   },
+
+  { kind: 'section', label: 'Posture' },
   {
-    href: '/app/govern/runtime',
-    label: 'Runtime',
-    icon: 'gauge',
+    href: '/app/redteam', label: 'Red Team posture', icon: 'redteam',
+    excludePrefixes: ['/app/redteam/library', '/app/redteam/api'],
     children: [
-      { href: '/app/govern/runtime',           label: 'Overview' },
-      { href: '/app/govern/runtime/dlp',       label: 'DLP rules' },
-      { href: '/app/govern/runtime/inspector', label: 'Prompt inspector' },
-      { href: '/app/govern/runtime/gateway',   label: 'AI gateway' },
+      { href: '/app/redteam',         label: 'Overview' },
+      { href: '/app/redteam/targets', label: 'Targets'  },
+      { href: '/app/redteam/suites',  label: 'Suites'   },
+      { href: '/app/redteam/runs',    label: 'Runs'     },
     ],
   },
-  { href: '/app/govern/connectors',  label: 'Connectors',   icon: 'cable' },
+  {
+    href: '/app/govern/runtime', label: 'Runtime control', icon: 'gauge',
+    children: [
+      { href: '/app/govern/runtime',           label: 'Overview'         },
+      { href: '/app/govern/runtime/dlp',       label: 'DLP rules'        },
+      { href: '/app/govern/runtime/gateway',   label: 'AI gateway'       },
+      { href: '/app/govern/runtime/inspector', label: 'Prompt Inspector' },
+    ],
+  },
+  { href: '/app/govern/compliance', label: 'Compliance evidence', icon: 'shield' },
+
+  { kind: 'section', label: 'Library' },
+  { href: '/app/redteam/library',   label: 'Attack library', icon: 'book', activePrefix: '/app/redteam/library' },
+
+  { kind: 'section', label: 'Setup' },
+  { href: '/app/govern/connectors', label: 'Connectors', icon: 'cable' },
+  { href: '/app/redteam/api',       label: 'API + SDK',  icon: 'code'  },
 ];
 
 const SUITES_NAV = [
@@ -82,7 +110,7 @@ const MODES = [
 const MODE_KEY = 'agentvault.sidebar.mode';
 
 function modeFromPath(pathname) {
-  if (pathname.startsWith('/app/govern')) return 'govern';
+  if (pathname.startsWith('/app/govern') || pathname.startsWith('/app/redteam')) return 'govern';
   if (pathname.startsWith('/app/grc') ||
       pathname.startsWith('/app/context') ||
       pathname.startsWith('/app/kyc') ||
@@ -112,15 +140,29 @@ function Icon({ name, size = 16 }) {
     case 'layers':    return <svg {...p}><path d="M10 3l7 4-7 4-7-4 7-4z"/><path d="M3 11l7 4 7-4"/><path d="M3 15l7 4 7-4"/></svg>;
     case 'cable':     return <svg {...p}><path d="M5 14a3 3 0 0 0 0-6V4M15 6a3 3 0 0 0 0 6v4"/><circle cx="5" cy="3" r="1"/><circle cx="15" cy="17" r="1"/></svg>;
     case 'gauge':     return <svg {...p}><path d="M3 14a7 7 0 0 1 14 0"/><path d="M10 14l4-3"/><circle cx="10" cy="14" r="0.8" fill="currentColor"/></svg>;
+    case 'redteam':   return <svg {...p}><path d="M10 3l6 2v5c0 4-3 6-6 7-3-1-6-3-6-7V5l6-2z"/><path d="M7.5 9l2.5 2.5L13 8"/><path d="M10 11.5v3"/></svg>;
+    case 'shield':    return <svg {...p}><path d="M10 3l6 2v5c0 4-3 6-6 7-3-1-6-3-6-7V5l6-2z"/><path d="M10 8v4M10 14v0.01"/></svg>;
+    case 'inspector': return <svg {...p}><circle cx="8" cy="8" r="4.5"/><path d="M11.5 11.5l4 4"/><path d="M6 8h4M8 6v4"/></svg>;
+    case 'book':      return <svg {...p}><path d="M4 4h9a3 3 0 0 1 3 3v10a2 2 0 0 0-2-2H4z"/><path d="M4 4v11"/></svg>;
+    case 'code':      return <svg {...p}><path d="M7 6l-4 4 4 4M13 6l4 4-4 4"/></svg>;
     default:         return null;
   }
 }
 
 function NavGroup({ item, pathname, accent }) {
-  // For runtime, "inside" means pathname is exactly the parent OR starts
-  // with a child href. The parent href is also a real page (Overview), so
-  // we match on the parent itself too.
-  const inside = pathname === item.href || pathname.startsWith(item.href + '/');
+  // "Inside" means pathname is exactly the parent OR starts with a child
+  // href. The parent href is also a real page (Overview), so we match on
+  // it too. `excludePrefixes` lets us carve out sub-routes that have been
+  // promoted to their own top-level item (e.g. /app/redteam/library is a
+  // separate sidebar entry and shouldn't light up Red Team posture).
+  const inside = (() => {
+    const matches = pathname === item.href || pathname.startsWith(item.href + '/');
+    if (!matches) return false;
+    if (Array.isArray(item.excludePrefixes)) {
+      for (const ex of item.excludePrefixes) if (pathname.startsWith(ex)) return false;
+    }
+    return true;
+  })();
   const [open, setOpen] = useState(inside);
   useEffect(() => { if (inside) setOpen(true); }, [inside]);
 
@@ -146,7 +188,13 @@ function NavGroup({ item, pathname, accent }) {
       {open && (
         <ul className="mt-0.5 ml-4 pl-3 border-l border-border/70 space-y-0.5">
           {item.children.map(c => {
-            const active = pathname === c.href;
+            // A child is active when its href matches exactly. For non-parent
+            // children, also treat any deeper sub-route as active (so a DLP
+            // detail page still highlights "DLP rules"). The parent-equal
+            // child (Overview) keeps strict equality so it isn't always lit.
+            const active = c.href === item.href
+              ? pathname === c.href
+              : pathname === c.href || pathname.startsWith(c.href + '/');
             return (
               <li key={c.href}>
                 <Link
@@ -167,11 +215,14 @@ function NavGroup({ item, pathname, accent }) {
   );
 }
 
-/* Mode-tinted accent so each mode reads distinct without a full theme swap. */
+/* Mode-tinted accent so each mode reads distinct without a full theme swap.
+   Govern uses the same primary indigo as Build — destructive red is reserved
+   for genuinely critical states (blocked, restricted, bypass) inside pages,
+   not navigation chrome. */
 const MODE_ACCENT = {
-  build:  { active: 'bg-primary/10 text-primary',         tab: 'border-primary/40 bg-primary/10 text-primary' },
-  govern: { active: 'bg-destructive/10 text-destructive', tab: 'border-destructive/40 bg-destructive/10 text-destructive' },
-  suites: { active: 'bg-accent/15 text-accent',           tab: 'border-accent/50 bg-accent/15 text-accent' },
+  build:  { active: 'bg-primary/10 text-primary', tab: 'border-primary/40 bg-primary/10 text-primary' },
+  govern: { active: 'bg-primary/10 text-primary', tab: 'border-primary/40 bg-primary/10 text-primary' },
+  suites: { active: 'bg-accent/15 text-accent',   tab: 'border-accent/50 bg-accent/15 text-accent' },
 };
 
 export default function AppSidebar({ collapsed, onToggle }) {
@@ -205,6 +256,20 @@ export default function AppSidebar({ collapsed, onToggle }) {
   const accent = MODE_ACCENT[mode] || MODE_ACCENT.build;
 
   const isActive = (href) => href === '/app' ? pathname === '/app' : pathname.startsWith(href);
+  /* itemActive — richer rule used by Govern items.
+       activePrefix    → match this prefix instead of the literal href
+       excludePrefixes → if any matches, this item is NOT active (used so
+                         /app/redteam/library doesn't light up "Red Team
+                         posture" — that's a separate top-level item now).
+     Falls back to plain isActive when neither is supplied. */
+  const itemActive = (item) => {
+    const prefix = item.activePrefix || item.href;
+    if (!pathname.startsWith(prefix)) return false;
+    if (Array.isArray(item.excludePrefixes)) {
+      for (const ex of item.excludePrefixes) if (pathname.startsWith(ex)) return false;
+    }
+    return true;
+  };
 
   /* The list rendered under "Mode → items". Build keeps the long list as
      before; Govern shows its 4 routes; Suites shows the 4 SKUs (locked +
@@ -243,16 +308,24 @@ export default function AppSidebar({ collapsed, onToggle }) {
 
         <div className="mt-3 mb-1 h-px w-8 bg-border" />
         <nav className="flex-1 flex flex-col gap-1 items-center mt-2 overflow-y-auto">
-          {navItems.map(n => (
-            n.enabled === false ? (
-              <span key={n.href} title={`${n.label} · soon`}
-                className="h-9 w-9 rounded flex items-center justify-center text-muted-foreground/40 cursor-not-allowed">
-                <Icon name={n.icon} />
-              </span>
-            ) : (
+          {navItems.map((n, i) => {
+            // Section labels render as a tiny divider in the collapsed rail —
+            // no text fits, so we use a faint horizontal line as a separator.
+            if (n.kind === 'section') {
+              return <span key={`sep-${i}`} aria-hidden className="my-1 h-px w-6 bg-border/60" />;
+            }
+            if (n.enabled === false) {
+              return (
+                <span key={n.href} title={`${n.label} · soon`}
+                  className="h-9 w-9 rounded flex items-center justify-center text-muted-foreground/40 cursor-not-allowed">
+                  <Icon name={n.icon} />
+                </span>
+              );
+            }
+            return (
               <Link key={n.href} href={n.href} title={n.label}
                 className={`relative h-9 w-9 rounded flex items-center justify-center transition-colors ${
-                  isActive(n.href) ? accent.active : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  itemActive(n) ? accent.active : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}>
                 <Icon name={n.icon} />
                 {n.icon === 'approvals' && pendingApprovals > 0 && (
@@ -261,8 +334,8 @@ export default function AppSidebar({ collapsed, onToggle }) {
                   </span>
                 )}
               </Link>
-            )
-          ))}
+            );
+          })}
         </nav>
       </aside>
     );
@@ -330,8 +403,16 @@ export default function AppSidebar({ collapsed, onToggle }) {
           {mode === 'govern' ? 'Control plane' : mode === 'suites' ? 'Suites' : 'Build'}
         </div>
 
-        {navItems.map(n => (
-          n.enabled === false ? (
+        {navItems.map((n, i) => (
+          // Section header — renders as a small uppercase label between items.
+          // First section in the mode replaces the per-mode top-of-nav label
+          // (no need for "Control plane" *and* "Inventory" right next to each
+          // other), but later sections sit between items as separators.
+          n.kind === 'section' ? (
+            <div key={`sec-${i}`} className="px-2 pt-3 pb-1 text-[9.5px] uppercase tracking-[0.2em] text-muted-foreground/80 font-mono">
+              {n.label}
+            </div>
+          ) : n.enabled === false ? (
             <div key={n.href}
               className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] text-muted-foreground/55 cursor-not-allowed"
               title="Coming soon">
@@ -344,7 +425,7 @@ export default function AppSidebar({ collapsed, onToggle }) {
           ) : (
             <Link key={n.href} href={n.href}
               className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] transition-colors ${
-                isActive(n.href)
+                itemActive(n)
                   ? `${accent.active} font-medium`
                   : 'text-foreground/80 hover:bg-muted hover:text-foreground'
               }`}>

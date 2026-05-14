@@ -1,6 +1,7 @@
 import Navbar from "./components/Navbar";
 import ArchitectureDiagram from "./components/home/ArchitectureDiagram";
 import FooterCTA from "./components/home/FooterCTA";
+import GovernSection from "./components/home/GovernSection";
 import Hero from "./components/home/Hero";
 import PlatformPillars from "./components/home/PlatformPillars";
 import SolutionsPreview from "./components/home/SolutionsPreview";
@@ -16,6 +17,7 @@ export default function Page() {
         <TrustStrip />
         <PlatformPillars />
         <SolutionsPreview />
+        <GovernSection />
         <ArchitectureDiagram />
         <UseCases />
         <FooterCTA />

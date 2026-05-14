@@ -1,4 +1,75 @@
 export const SOLUTIONS = {
+  govern: {
+    slug: "govern",
+    suite: "AgentVault Govern",
+    tagline: "Discover Shadow AI. Enforce policy. Prove safety.",
+    shortTag: "AI governance",
+    accent: "#0891B2",
+    problemStatement:
+      "Employees are already using ChatGPT, Claude, Copilot, Cursor, Notion AI, and more — on corporate data, without IT approval. AgentVault Govern discovers every AI tool in your org, enforces DLP at the gateway, red-teams your agents continuously, and ships audit evidence on demand.",
+    problems: [
+      { title: "You don't know what AI your org is using",     body: "Employees sign up for ChatGPT, Copilot, Notion AI, Cursor — on corporate data, with no IT approval. Discovery shows you what's actually running." },
+      { title: "You can't prove what was blocked",              body: "Auditors ask: who used which model on which data, and what did the gateway decide? Runtime Control stamps every decision into the audit log." },
+      { title: "Your agents have never been red-teamed",         body: "Prompt injection, jailbreaks, data exfiltration, tool misuse — one bad prompt away from a headline. Continuous testing catches regressions before prod." },
+      { title: "Audit season is still a fire drill",             body: "Evidence is scattered across tickets, screenshots, sheets. Compliance Evidence consolidates everything into a signed bundle on demand." },
+    ],
+    capabilities: [
+      {
+        title: "Shadow AI Discovery",
+        body: "Live stream of AI activity observed across egress, identity, and SaaS connectors — Copilot seats, OAuth apps, browser AI helpers, personal accounts. Triage before it becomes an audit finding.",
+        specs: [["Connectors", "14"], ["Signals", "user · dest · category"], ["Actions", "approve · block · escalate"]],
+      },
+      {
+        title: "AI Inventory",
+        body: "One ledger for every AI asset — internal agents, approved SaaS, Copilot seats, OAuth apps, BYO models, browser extensions, unmanaged tools. Owner, approval state, risk class, destination, data categories.",
+        specs: [["Asset types", "8"], ["Lifecycle", "Draft → Approved"], ["Joins", "events · controls · audit"]],
+      },
+      {
+        title: "Runtime Control",
+        body: "AI gateway with a real DLP engine — regex, Luhn-validated PII, classifier, prompt-injection phrase list. Prompt Inspector lets you paste & preview decisions before deploy.",
+        specs: [["Detectors", "Regex · Luhn · Class · Injection"], ["Protocols", "OpenAI · Anthropic · Azure"], ["Audit", "Every request stamped"]],
+      },
+      {
+        title: "Red Team + Compliance Evidence",
+        body: "2,000+ attacks mapped to MITRE ATLAS, OWASP LLM, OWASP Agentic, NIST AI RMF. Continuous testing with regression detection. One-click signed audit bundle covering 12+ frameworks.",
+        specs: [["Attacks", "2,000+"], ["Frameworks", "12+"], ["Evidence", "Signed JSON · SHA-256"]],
+      },
+    ],
+    workflow: {
+      name: "Shadow AI to signed evidence",
+      steps: [
+        { kind: "connector.egress",     label: "Zscaler · proxy log ingestion",         metric: "1.2M events / day" },
+        { kind: "discovery.match",      label: "Detect unmanaged ChatGPT usage",         metric: "47 users · 3 depts" },
+        { kind: "inventory.add",        label: "Auto-register asset · risk=high",        metric: "asset_chatgpt_corp" },
+        { kind: "policy.gateway",       label: "DLP redacts PII · forwards to model",    metric: "12 redactions / hr" },
+        { kind: "redteam.suite",        label: "Smoke suite vs. invoice agent",           metric: "121 attacks · 4 bypass", dur: "3 m 12 s" },
+        { kind: "compliance.bundle",    label: "Export EU AI Act evidence pack",          metric: "signed · sha-256 pinned" },
+      ],
+    },
+    impact: {
+      headline: "From discovery to signed audit bundle — one platform.",
+      stats: [
+        ["AI assets discovered", "100%"],
+        ["DLP enforcement",      "Real-time"],
+        ["Frameworks mapped",    "12+"],
+      ],
+      quote:
+        "Our board asked us how we govern AI. The Govern suite gave us the answer in a single screenshot — every tool, every decision, every framework mapped. The auditor signed off without a follow-up question.",
+      quoteBy: "Daniel Reyes",
+      quoteRole: "CISO · Mid-market insurer",
+    },
+    techSpecs: [
+      ["Discovery sources",   "Zscaler · Netskope · Cloudflare · CrowdStrike · Okta · Defender · Splunk · Azure OpenAI audit · GitHub Copilot · Cursor · Slack"],
+      ["DLP engine",          "Regex · Luhn-validated PII · keyword classifier · prompt-injection phrase list"],
+      ["AI gateway",          "OpenAI / Anthropic / Azure OpenAI compatible · bundle deploy"],
+      ["Attack library",      "2,000+ attacks · MITRE ATLAS · OWASP LLM Top 10 · OWASP Agentic · NIST AI 600-1"],
+      ["Frameworks",          "EU AI Act · NIST AI RMF · ISO 42001 · SOC 2 · ISO 27001 · HIPAA · GDPR · OWASP LLM Top 10"],
+      ["Evidence export",     "Signed JSON · SHA-256 pinned · per-framework drill-down"],
+      ["Data residency",      "US · EU · APAC · BYOC"],
+      ["Compliance posture",  "SOC 2 Type II · ISO 27001 · HIPAA · GDPR"],
+    ],
+  },
+
   grc: {
     slug: "grc",
     suite: "AgentVault GRC Suite",

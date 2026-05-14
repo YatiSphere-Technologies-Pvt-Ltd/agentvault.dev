@@ -169,6 +169,45 @@ export function setAssetOwner(id, owner) {
   });
 }
 
+/* Manually-registered asset. `discovered_via: 'manual'` is the marker
+   the detail page reads to decide whether Delete is allowed (auto-
+   discovered rows can be quarantined/blocked but never removed). */
+export function createAsset(record) {
+  mutate((raw) => {
+    const additions = [...raw.assets.additions, record];
+    return { ...raw, assets: { ...raw.assets, additions } };
+  });
+}
+
+export function updateAsset(id, patch) {
+  mutate((raw) => {
+    // Edits to manually-added (additions) rows are folded in place so the
+    // form result round-trips; for seeded rows we use the mutations map
+    // the same way approveAsset etc. do.
+    const inAdditions = raw.assets.additions.some(a => a.id === id);
+    if (inAdditions) {
+      const additions = raw.assets.additions.map(a => a.id === id ? { ...a, ...patch } : a);
+      return { ...raw, assets: { ...raw.assets, additions } };
+    }
+    const muts = { ...raw.assets.mutations };
+    muts[id] = { ...(muts[id] || {}), ...patch };
+    return { ...raw, assets: { ...raw.assets, mutations: muts } };
+  });
+}
+
+export function removeAsset(id) {
+  mutate((raw) => {
+    // Manually-added rows: drop from additions. Seeded rows: tombstone.
+    const inAdditions = raw.assets.additions.some(a => a.id === id);
+    if (inAdditions) {
+      const additions = raw.assets.additions.filter(a => a.id !== id);
+      return { ...raw, assets: { ...raw.assets, additions } };
+    }
+    const tombstones = Array.from(new Set([...raw.assets.tombstones, id]));
+    return { ...raw, assets: { ...raw.assets, tombstones } };
+  });
+}
+
 /* ───── event mutations ───── */
 
 export function ackEvent(id, decision) {

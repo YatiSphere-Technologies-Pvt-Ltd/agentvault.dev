@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { ArrowLeft, Trash2, FileSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { GovernHeader, RuntimeSubNav } from '../../../_shared';
+import { GovernHeader } from '../../../_shared';
 import { useDlpRules, updateDlpRule, removeDlpRule } from '../../../_store';
 import { inspect } from '../../../_dlpEngine';
 
@@ -40,8 +40,7 @@ export default function DlpRuleDetailPage() {
   if (!rule) {
     return (
       <>
-        <GovernHeader />
-        <RuntimeSubNav />
+        <GovernHeader title="DLP rules" />
         <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7">
           <div className="rounded-lg border border-dashed border-border bg-card px-6 py-10 text-center">
             <div className="text-[13px] font-medium text-foreground">Rule not found</div>
@@ -72,8 +71,7 @@ export default function DlpRuleDetailPage() {
 
   return (
     <>
-      <GovernHeader />
-      <RuntimeSubNav />
+      <GovernHeader title="DLP rules" />
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-5">
         <Link href="/app/govern/runtime/dlp" className="text-[12px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
           <ArrowLeft className="h-3.5 w-3.5" /> All DLP rules
@@ -315,31 +313,26 @@ function Row({ label, children }) {
   );
 }
 function ActionBadge({ action }) {
-  const tone = action === 'block' ? 'destructive'
-             : action === 'redact' ? 'accent'
-             : action === 'warn' ? 'accent'
-             : 'muted';
-  const cls = tone === 'destructive' ? 'border-destructive/40 text-destructive bg-destructive/10'
-            : tone === 'accent'      ? 'border-accent/40 text-accent bg-accent/10'
-            : 'border-border text-muted-foreground bg-muted/40';
+  const dot = action === 'block'  ? 'var(--destructive)'
+            : action === 'redact' ? '#D97706'
+            : action === 'warn'   ? '#F59E0B'
+            : 'var(--muted-foreground)';
   return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-mono uppercase tracking-[0.12em] ${cls}`}>
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-muted/60 text-[10px] font-mono uppercase tracking-[0.12em] text-foreground">
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: dot }} />
       {action}
     </span>
   );
 }
 function SeverityChip({ severity }) {
   if (!severity) return null;
-  const tone = severity === 'critical' ? 'destructive'
-             : severity === 'high'     ? 'primary'
-             : severity === 'medium'   ? 'accent'
-             : 'muted';
-  const cls = tone === 'destructive' ? 'border-destructive/40 text-destructive bg-destructive/10'
-            : tone === 'primary'     ? 'border-primary/40 text-primary bg-primary/10'
-            : tone === 'accent'      ? 'border-accent/40 text-accent bg-accent/10'
-            : 'border-border text-muted-foreground bg-muted/40';
+  const dot = severity === 'critical' ? 'var(--destructive)'
+            : severity === 'high'     ? '#F59E0B'
+            : severity === 'medium'   ? 'var(--primary)'
+            : 'var(--muted-foreground)';
   return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-mono uppercase tracking-[0.12em] ${cls}`}>
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-muted/60 text-[10px] font-mono uppercase tracking-[0.12em] text-foreground">
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: dot }} />
       {severity}
     </span>
   );

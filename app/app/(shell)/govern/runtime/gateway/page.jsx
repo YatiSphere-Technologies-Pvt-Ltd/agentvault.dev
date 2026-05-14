@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Gauge, Sparkles, Copy, ChevronRight, Cloud, Boxes, Network, Anchor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { GovernHeader, RuntimeSubNav, DecisionPill, fmtAgo, fmtKb } from '../../_shared';
+import { GovernHeader, DecisionPill, fmtAgo, fmtKb } from '../../_shared';
 import { useGatewayConfig, useDlpRules, useEvents, updateGatewayConfig, compileGatewayBundle, deployGateway } from '../../_store';
 
 /* AI Gateway page.
@@ -41,8 +41,10 @@ export default function GatewayPage() {
 
   return (
     <>
-      <GovernHeader />
-      <RuntimeSubNav />
+      <GovernHeader
+        title="AI gateway"
+        subtitle="The enforcement point. Every model request flows through the gateway, where DLP rules redact secrets, prompt-injection screens fire, and policy decisions are stamped onto the audit log."
+      />
 
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-5">
         {/* Header */}
@@ -60,7 +62,7 @@ export default function GatewayPage() {
               )}
             </div>
             <h2 className="text-[20px] font-semibold tracking-tight text-foreground leading-tight inline-flex items-center gap-2">
-              <Gauge className="h-5 w-5 text-destructive" /> {gw.name}
+              <Gauge className="h-5 w-5 text-brand-teal" /> {gw.name}
             </h2>
             <p className="mt-1 text-[12.5px] text-muted-foreground max-w-[80ch]">
               Inspects all AI egress before it leaves the perimeter. Compiles DLP rules into a
@@ -71,7 +73,7 @@ export default function GatewayPage() {
             <Button size="sm" variant="outline" onClick={() => compileGatewayBundle()}>
               <Sparkles className="h-3.5 w-3.5" /> Compile
             </Button>
-            <Button size="sm" onClick={() => deployGateway()} className="bg-destructive text-destructive-foreground hover:brightness-110">
+            <Button size="sm" onClick={() => deployGateway()}>
               Redeploy
             </Button>
           </div>
@@ -312,7 +314,7 @@ function Lbl({ children }) {
 
 function Stat({ label, value, sub, tone = 'default', icon }) {
   const color = tone === 'bad'  ? 'text-destructive'
-              : tone === 'warn' ? 'text-primary'
+              : tone === 'warn' ? 'text-(--chart-3)'
               : tone === 'ok'   ? 'text-brand-teal'
               :                   'text-foreground';
   return (

@@ -3,105 +3,48 @@
 /* Shared UI bits for the Govern (control plane) suite.
    Header banner with sub-nav, risk/approval/type pills, fmt helpers. */
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ShieldAlert, Activity, Layers, Cable, Eye, Gauge } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 import {
   RISK_CLASSES, APPROVAL_STATES, ASSET_TYPES,
   DESTINATION_CLASSES, CONNECTOR_FAMILIES, connectorById,
 } from './_connectorCatalog';
 
-const TABS = [
-  { href: '/app/govern',             label: 'Overview',     icon: Eye },
-  { href: '/app/govern/discovery',   label: 'Discovery',    icon: Activity },
-  { href: '/app/govern/inventory',   label: 'AI Inventory', icon: Layers },
-  { href: '/app/govern/runtime',     label: 'Runtime',      icon: Gauge },
-  { href: '/app/govern/connectors',  label: 'Connectors',   icon: Cable },
-];
+/* Per-page header for the Govern suite. Each page passes its own
+   title + subtitle; the tab strip used to live here but the sidebar now
+   carries that navigation. `eyebrow` defaults to "Control plane" but
+   pages can override it (e.g. Red Team uses "Red Team"). `actions` is an
+   optional slot rendered on the right of the title row for CTAs.
 
-export function GovernHeader() {
-  const pathname = usePathname();
+   Visual: muted parchment gradient + primary-tinted eyebrow chip. Red is
+   reserved for explicit fail-state pills inside the page body, not the
+   chrome that wraps every Govern page. */
+export function GovernHeader({
+  title = 'AI Governance & Control',
+  subtitle,
+  eyebrow = 'Control plane',
+  eyebrowIcon: EyebrowIcon = ShieldAlert,
+  actions,
+}) {
   return (
-    <div className="border-b border-border bg-gradient-to-br from-destructive/[0.04] via-transparent to-transparent">
-      <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 pt-7 pb-3">
+    <div className="border-b border-border bg-gradient-to-br from-muted/40 via-transparent to-transparent">
+      <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 pt-7 pb-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 mb-2 px-2 py-0.5 rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-[10.5px] font-medium uppercase tracking-[0.14em]">
-              <ShieldAlert className="h-3 w-3" />
-              Control plane
+            <div className="inline-flex items-center gap-2 mb-2 px-2 py-0.5 rounded-md border border-primary/30 bg-primary/[0.08] text-primary text-[10.5px] font-medium uppercase tracking-[0.14em]">
+              {EyebrowIcon ? <EyebrowIcon className="h-3 w-3" /> : null}
+              {eyebrow}
             </div>
             <h1 className="text-[24px] font-semibold tracking-tight text-foreground leading-tight">
-              AI Governance & Control
+              {title}
             </h1>
-            <p className="mt-1 text-[13px] text-muted-foreground max-w-[68ch] leading-relaxed">
-              Discover every AI asset across the organization — internal agents, approved
-              SaaS, Copilot seats, and unmanaged Shadow AI. Apply policy, enforce DLP at the
-              gateway, and answer the audit question: <em>who used which model on which data?</em>
-            </p>
+            {subtitle && (
+              <p className="mt-1 text-[13px] text-muted-foreground max-w-[80ch] leading-relaxed">
+                {subtitle}
+              </p>
+            )}
           </div>
+          {actions && <div className="shrink-0">{actions}</div>}
         </div>
-        <nav className="mt-5 flex items-center gap-1">
-          {TABS.map(t => {
-            const active = t.href === '/app/govern'
-              ? pathname === '/app/govern'
-              : pathname.startsWith(t.href);
-            const Icon = t.icon;
-            return (
-              <Link
-                key={t.href}
-                href={t.href}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12.5px] font-medium transition-colors ${
-                  active
-                    ? 'bg-destructive/10 text-destructive'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {t.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-    </div>
-  );
-}
-
-/* Sub-nav rendered on every /app/govern/runtime/* page so the four
-   runtime surfaces (Overview / DLP / Inspector / Gateway) feel like one
-   product. */
-const RUNTIME_TABS = [
-  { href: '/app/govern/runtime',           label: 'Overview' },
-  { href: '/app/govern/runtime/dlp',       label: 'DLP rules' },
-  { href: '/app/govern/runtime/inspector', label: 'Prompt inspector' },
-  { href: '/app/govern/runtime/gateway',   label: 'AI gateway' },
-];
-
-export function RuntimeSubNav() {
-  const pathname = usePathname();
-  return (
-    <div className="border-b border-border bg-card/40">
-      <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex items-center gap-1 py-2">
-          {RUNTIME_TABS.map(t => {
-            const active = t.href === '/app/govern/runtime'
-              ? pathname === '/app/govern/runtime'
-              : pathname.startsWith(t.href);
-            return (
-              <Link
-                key={t.href}
-                href={t.href}
-                className={`inline-flex items-center px-3 py-1 rounded-md text-[12px] font-medium transition-colors ${
-                  active
-                    ? 'bg-destructive/10 text-destructive'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
-                }`}
-              >
-                {t.label}
-              </Link>
-            );
-          })}
-        </nav>
       </div>
     </div>
   );
@@ -109,71 +52,54 @@ export function RuntimeSubNav() {
 
 /* ────── pills ────── */
 
-export function RiskPill({ risk }) {
-  const meta = RISK_CLASSES[risk] || RISK_CLASSES.standard;
+/* Shared chip primitive used by every status pill in the Govern + Red
+   Team suite. Three style decisions:
+     1. Background is the muted neutral (`bg-muted/60`) — never the accent
+        tinted. This keeps all chips reading at the same visual weight and
+        avoids the red-on-red / amber-on-amber contrast problem the
+        old `color-mix(... 10%)` design produced.
+     2. Text is `text-foreground` (deep slate ink) — always high contrast
+        regardless of the accent.
+     3. Color comes through a 6px dot on the left. Reserves color as a
+        signal, not as the whole chip.
+
+   `variant` controls casing/font:
+     - "default" → mixed-case medium label (Approval, Asset type, Destination)
+     - "mono"    → uppercase mono small-caps (Risk, Severity, Verdict, Decision)
+*/
+export function Chip({ accent, label, variant = 'default', title }) {
+  const isMono = variant === 'mono';
+  const cls = isMono
+    ? 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-muted/60 text-[10px] font-mono uppercase tracking-[0.12em] text-foreground'
+    : 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-muted/60 text-[10.5px] font-medium text-foreground';
   return (
-    <span
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-mono uppercase tracking-[0.12em]"
-      style={{
-        borderColor: `color-mix(in oklab, ${meta.accent} 50%, transparent)`,
-        background: `color-mix(in oklab, ${meta.accent} 12%, transparent)`,
-        color: meta.accent,
-      }}
-    >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.accent }} />
-      {meta.label}
+    <span className={cls} title={title}>
+      {accent && <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: accent }} />}
+      {label}
     </span>
   );
 }
 
+export function RiskPill({ risk }) {
+  const meta = RISK_CLASSES[risk] || RISK_CLASSES.standard;
+  return <Chip variant="mono" accent={meta.accent} label={meta.label} />;
+}
+
 export function ApprovalPill({ state }) {
   const meta = APPROVAL_STATES[state] || APPROVAL_STATES.unknown;
-  return (
-    <span
-      className="inline-flex items-center px-1.5 py-0.5 rounded border text-[10.5px] font-medium"
-      style={{
-        borderColor: `color-mix(in oklab, ${meta.accent} 50%, transparent)`,
-        background: `color-mix(in oklab, ${meta.accent} 12%, transparent)`,
-        color: meta.accent,
-      }}
-    >
-      {meta.label}
-    </span>
-  );
+  return <Chip accent={meta.accent} label={meta.label} />;
 }
 
 export function AssetTypePill({ type }) {
   const meta = ASSET_TYPES[type];
   if (!meta) return null;
-  return (
-    <span
-      className="inline-flex items-center px-1.5 py-0.5 rounded border text-[10.5px] font-medium"
-      style={{
-        borderColor: `color-mix(in oklab, ${meta.accent} 40%, transparent)`,
-        background: `color-mix(in oklab, ${meta.accent} 10%, transparent)`,
-        color: meta.accent,
-      }}
-    >
-      {meta.label}
-    </span>
-  );
+  return <Chip accent={meta.accent} label={meta.label} title={meta.hint} />;
 }
 
 export function DestinationPill({ destination }) {
   const meta = DESTINATION_CLASSES[destination];
   if (!meta) return null;
-  return (
-    <span
-      className="inline-flex items-center px-1.5 py-0.5 rounded border text-[10.5px] font-mono"
-      style={{
-        borderColor: `color-mix(in oklab, ${meta.accent} 40%, transparent)`,
-        background: `color-mix(in oklab, ${meta.accent} 10%, transparent)`,
-        color: meta.accent,
-      }}
-    >
-      {meta.label}
-    </span>
-  );
+  return <Chip variant="mono" accent={meta.accent} label={meta.label} />;
 }
 
 /* Connector logo — same letter-tile pattern as Context Engine. */
@@ -200,28 +126,19 @@ export function ConnectorIcon({ kind, size = 28 }) {
 
 /* ────── decision tone for events ────── */
 
+/* `redact` and `warn` used to reuse var(--accent), which is parchment-muted
+   on the current theme and rendered as invisible text. Switch them to amber
+   so they're visually distinct from "block" (red) and "allow" (teal). */
 const DECISION_TONE = {
   block:  { label: 'Blocked',  color: 'var(--destructive)' },
-  redact: { label: 'Redacted', color: 'var(--accent)' },
-  warn:   { label: 'Warned',   color: 'var(--accent)' },
+  redact: { label: 'Redacted', color: '#D97706' /* dark amber */ },
+  warn:   { label: 'Warned',   color: '#F59E0B' /* amber */ },
   allow:  { label: 'Allowed',  color: 'var(--brand-teal)' },
   detect: { label: 'Detected', color: 'var(--primary)' },
 };
 export function DecisionPill({ decision }) {
   const meta = DECISION_TONE[decision] || DECISION_TONE.allow;
-  return (
-    <span
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-mono uppercase tracking-[0.12em]"
-      style={{
-        borderColor: `color-mix(in oklab, ${meta.color} 50%, transparent)`,
-        background: `color-mix(in oklab, ${meta.color} 12%, transparent)`,
-        color: meta.color,
-      }}
-    >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.color }} />
-      {meta.label}
-    </span>
-  );
+  return <Chip variant="mono" accent={meta.color} label={meta.label} />;
 }
 
 /* ────── helpers ────── */

@@ -8,15 +8,17 @@
    would be a backend microservice with its own ingestion pipeline. The UI
    here is the same pattern as the MCP connect flow. */
 
+/* Connector family colors — keep red reserved for genuine failure states.
+   SIEM is a *connector type*, not a risk signal, so it shouldn't be red. */
 export const CONNECTOR_FAMILIES = {
-  proxy:    { label: 'Network proxy / SWG', accent: '#3B5CFF' },
-  casb:     { label: 'CASB',                 accent: '#7C3AED' },
-  endpoint: { label: 'Endpoint / Browser',   accent: '#10B981' },
-  ide:      { label: 'IDE / Code',            accent: '#0891B2' },
-  saas:     { label: 'SaaS admin API',       accent: '#F59E0B' },
-  siem:     { label: 'SIEM / log lake',      accent: '#E11D48' },
-  cloud:    { label: 'Cloud audit',          accent: '#6366F1' },
-  identity: { label: 'Identity provider',    accent: '#8B5CF6' },
+  proxy:    { label: 'Network proxy / SWG', accent: '#3B5CFF' },  // indigo
+  casb:     { label: 'CASB',                 accent: '#7C3AED' }, // purple
+  endpoint: { label: 'Endpoint / Browser',   accent: '#10B981' }, // emerald
+  ide:      { label: 'IDE / Code',            accent: '#0891B2' }, // cyan
+  saas:     { label: 'SaaS admin API',       accent: '#F59E0B' }, // amber
+  siem:     { label: 'SIEM / log lake',      accent: '#475569' }, // slate (was red)
+  cloud:    { label: 'Cloud audit',          accent: '#6366F1' }, // indigo
+  identity: { label: 'Identity provider',    accent: '#8B5CF6' }, // violet
 };
 
 export const CONNECTOR_CATALOG = [
@@ -177,30 +179,36 @@ export function connectorById(id) {
 
 /* ──────────── asset + risk classifiers ────────────── */
 
+/* Asset type colors — these are *taxonomy*, not risk. Avoid red:
+   risk lives in RISK_CLASSES and APPROVAL_STATES below. */
 export const ASSET_TYPES = {
-  'internal-agent':   { label: 'Internal agent',     hint: 'AgentVault-managed agent', accent: '#3B5CFF' },
-  'external-saas':    { label: 'External SaaS',      hint: 'Public AI service',         accent: '#E11D48' },
-  'copilot-seat':     { label: 'Copilot seat',       hint: 'Coding assistant seat',     accent: '#0891B2' },
-  'browser-extension':{ label: 'Browser extension',  hint: 'In-browser AI helper',      accent: '#F59E0B' },
-  'oauth-app':        { label: 'OAuth app',          hint: 'AI app granted SSO scope',  accent: '#7C3AED' },
-  'byo-llm':          { label: 'BYO LLM',            hint: 'Self-hosted model',         accent: '#10B981' },
-  'personal-account': { label: 'Personal account',   hint: 'Employee personal AI',      accent: '#E11D48' },
-  'saas-feature':     { label: 'SaaS AI feature',    hint: 'AI built into a tool',      accent: '#6366F1' },
+  'internal-agent':   { label: 'Internal agent',     hint: 'AgentVault-managed agent', accent: '#3B5CFF' }, // indigo
+  'external-saas':    { label: 'External SaaS',      hint: 'Public AI service',         accent: '#F59E0B' }, // amber (was red)
+  'copilot-seat':     { label: 'Copilot seat',       hint: 'Coding assistant seat',     accent: '#0891B2' }, // cyan
+  'browser-extension':{ label: 'Browser extension',  hint: 'In-browser AI helper',      accent: '#0EA5E9' }, // sky (was amber, to free amber for SaaS)
+  'oauth-app':        { label: 'OAuth app',          hint: 'AI app granted SSO scope',  accent: '#7C3AED' }, // violet
+  'byo-llm':          { label: 'BYO LLM',            hint: 'Self-hosted model',         accent: '#10B981' }, // emerald
+  'personal-account': { label: 'Personal account',   hint: 'Employee personal AI',      accent: '#8B5CF6' }, // violet-lite (was red)
+  'saas-feature':     { label: 'SaaS AI feature',    hint: 'AI built into a tool',      accent: '#6366F1' }, // indigo-2
 };
 
+/* Risk classes — red is reserved for `restricted`. Everything else
+   uses the standard severity ramp (amber → indigo → emerald). */
 export const RISK_CLASSES = {
-  restricted: { label: 'Restricted', accent: '#E11D48', score: 4 },
-  high:       { label: 'High',       accent: '#F59E0B', score: 3 },
-  standard:   { label: 'Standard',   accent: '#3B5CFF', score: 2 },
-  low:        { label: 'Low',        accent: '#10B981', score: 1 },
+  restricted: { label: 'Restricted', accent: '#E11D48', score: 4 }, // red — genuinely critical
+  high:       { label: 'High',       accent: '#F59E0B', score: 3 }, // amber
+  standard:   { label: 'Standard',   accent: '#3B5CFF', score: 2 }, // indigo
+  low:        { label: 'Low',        accent: '#10B981', score: 1 }, // emerald
 };
 
+/* Approval states — `quarantined` is a contained-warning (amber, not red).
+   Red stays for `blocked` only. */
 export const APPROVAL_STATES = {
-  approved:    { label: 'Approved',    accent: '#10B981' },
-  pending:     { label: 'Pending',     accent: '#F59E0B' },
-  quarantined: { label: 'Quarantined', accent: '#E11D48' },
-  blocked:     { label: 'Blocked',     accent: '#E11D48' },
-  unknown:     { label: 'Unknown',     accent: '#6B7280' },
+  approved:    { label: 'Approved',    accent: '#10B981' },          // emerald
+  pending:     { label: 'Pending',     accent: '#F59E0B' },          // amber
+  quarantined: { label: 'Quarantined', accent: '#D97706' },          // dark amber (was red)
+  blocked:     { label: 'Blocked',     accent: '#E11D48' },          // red — terminal state
+  unknown:     { label: 'Unknown',     accent: '#6B7280' },          // slate
 };
 
 export const DATA_CATEGORIES = [
@@ -208,8 +216,12 @@ export const DATA_CATEGORIES = [
   'contracts', 'credentials', 'business-strategy', 'employee-data',
 ];
 
+/* Destination classes — public LLMs ARE the highest-risk destination, but
+   in a typical inventory most rows are public-LLM, so painting them red
+   floods the screen. Use dark amber instead; red stays for the explicit
+   "blocked" / "restricted" pills elsewhere. */
 export const DESTINATION_CLASSES = {
-  'public-llm':       { label: 'Public LLM',       accent: '#E11D48' },
+  'public-llm':       { label: 'Public LLM',       accent: '#D97706' }, // dark amber (was red)
   'enterprise-saas':  { label: 'Enterprise SaaS',  accent: '#3B5CFF' },
   'internal-agent':   { label: 'Internal agent',   accent: '#10B981' },
   'sandbox':          { label: 'Sandbox',          accent: '#7C3AED' },

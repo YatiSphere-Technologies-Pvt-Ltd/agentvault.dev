@@ -39,8 +39,11 @@ export function FacetFilter({ title, options, selected, onChange }) {
     onChange(next);
   };
 
+  // Called from two places: a button onClick (gets a DOM event) and a
+  // CommandItem onSelect (gets the item's value string). Only call
+  // stopPropagation when we actually got an event.
   const clear = (e) => {
-    e?.stopPropagation();
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
     onChange(new Set());
   };
 

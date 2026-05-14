@@ -2,13 +2,27 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { useWorkspaces } from './_workspaceStore';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { usePendingCount } from './approvals/_store';
 
-const NAV = [
+/* The sidebar runs in three modes.
+
+   - Build  — the builder surface: Studio, Agents, Knowledge, Tools, Vault,
+              MCP, Runs, Approvals.
+   - Govern — the control plane (Phase 1: discovery, AI inventory,
+              connectors, exec dashboard).
+   - Suites — productized verticals (GRC, Context Engine, etc).
+
+   Mode is derived from the pathname; we also persist the user's last
+   manual choice in localStorage so a tab click on /app/govern stays in
+   Govern mode even if they navigate to a builder route briefly.
+
+   Settings + Home are mode-agnostic and pinned at the top. */
+
+const BUILD_NAV = [
   { href: '/app',            label: 'Home',         icon: 'home' },
   { href: '/app/studio',     label: 'Agent Studio', icon: 'studio', badge: 'Beta' },
   { href: '/app/agents',     label: 'Agents',       icon: 'agent' },
@@ -18,28 +32,63 @@ const NAV = [
   { href: '/app/mcp',        label: 'MCP Servers',  icon: 'mcp' },
   { href: '/app/runs',       label: 'Runs',         icon: 'runs' },
   { href: '/app/approvals',  label: 'Approvals',    icon: 'approvals' },
-  {
-    href: '/app/settings',
-    label: 'Settings',
-    icon: 'settings',
-    children: [
-      { href: '/app/settings/profile',   label: 'Profile'   },
-      { href: '/app/settings/workspace', label: 'Workspace' },
-      { href: '/app/settings/team',      label: 'Team'      },
-      { href: '/app/settings/billing',   label: 'Billing'   },
-      { href: '/app/settings/security',  label: 'Security'  },
-      { href: '/app/settings/api',       label: 'API keys'  },
-    ],
-  },
 ];
 
-// Suite SKUs. Only GRC is wired today; the others render as locked rows.
-const SUITES = [
-  { href: '/app/grc',        label: 'GRC Suite',     icon: 'grc',       enabled: true },
-  { href: '/app/kyc',        label: 'KYC Intel',     icon: 'kyc',       enabled: false },
-  { href: '/app/workforce',  label: 'Workforce',     icon: 'workforce', enabled: false },
-  { href: '/app/context',    label: 'Context',       icon: 'context',   enabled: false },
+const GOVERN_NAV = [
+  { href: '/app/govern',             label: 'Overview',     icon: 'eye' },
+  { href: '/app/govern/discovery',   label: 'Discovery',    icon: 'activity' },
+  { href: '/app/govern/inventory',   label: 'AI Inventory', icon: 'layers' },
+  {
+    href: '/app/govern/runtime',
+    label: 'Runtime',
+    icon: 'gauge',
+    children: [
+      { href: '/app/govern/runtime',           label: 'Overview' },
+      { href: '/app/govern/runtime/dlp',       label: 'DLP rules' },
+      { href: '/app/govern/runtime/inspector', label: 'Prompt inspector' },
+      { href: '/app/govern/runtime/gateway',   label: 'AI gateway' },
+    ],
+  },
+  { href: '/app/govern/connectors',  label: 'Connectors',   icon: 'cable' },
 ];
+
+const SUITES_NAV = [
+  { href: '/app/grc',     label: 'GRC Suite',      icon: 'grc',       enabled: true },
+  { href: '/app/context', label: 'Context Engine', icon: 'context',   enabled: true  },
+  { href: '/app/kyc',     label: 'KYC Intel',      icon: 'kyc',       enabled: false },
+  { href: '/app/workforce', label: 'Workforce',    icon: 'workforce', enabled: false },
+];
+
+const SETTINGS = {
+  href: '/app/settings',
+  label: 'Settings',
+  icon: 'settings',
+  children: [
+    { href: '/app/settings/profile',   label: 'Profile'   },
+    { href: '/app/settings/workspace', label: 'Workspace' },
+    { href: '/app/settings/team',      label: 'Team'      },
+    { href: '/app/settings/billing',   label: 'Billing'   },
+    { href: '/app/settings/security',  label: 'Security'  },
+    { href: '/app/settings/api',       label: 'API keys'  },
+  ],
+};
+
+const MODES = [
+  { id: 'build',  label: 'Build',  hint: 'Build agents, tools, knowledge.' },
+  { id: 'govern', label: 'Govern', hint: 'Discover, govern, audit AI usage.' },
+  { id: 'suites', label: 'Suites', hint: 'Productized vertical packs.' },
+];
+
+const MODE_KEY = 'agentvault.sidebar.mode';
+
+function modeFromPath(pathname) {
+  if (pathname.startsWith('/app/govern')) return 'govern';
+  if (pathname.startsWith('/app/grc') ||
+      pathname.startsWith('/app/context') ||
+      pathname.startsWith('/app/kyc') ||
+      pathname.startsWith('/app/workforce')) return 'suites';
+  return 'build';
+}
 
 function Icon({ name, size = 16 }) {
   const p = { width: size, height: size, viewBox: '0 0 20 20', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' };
@@ -58,42 +107,42 @@ function Icon({ name, size = 16 }) {
     case 'kyc':       return <svg {...p}><circle cx="10" cy="8" r="3"/><path d="M4 17c1-3 3.5-4 6-4s5 1 6 4"/><path d="M14 4l2 2-2 2"/></svg>;
     case 'workforce': return <svg {...p}><circle cx="6" cy="7" r="2"/><circle cx="14" cy="7" r="2"/><path d="M2 16c0-2.5 2-4 4-4s4 1.5 4 4M10 16c0-2.5 2-4 4-4s4 1.5 4 4"/></svg>;
     case 'context':   return <svg {...p}><path d="M3 5h14v10H3z"/><path d="M3 9h14M7 5v10"/></svg>;
+    case 'eye':       return <svg {...p}><path d="M2 10c2-4 5-6 8-6s6 2 8 6c-2 4-5 6-8 6s-6-2-8-6z"/><circle cx="10" cy="10" r="2.5"/></svg>;
+    case 'activity':  return <svg {...p}><path d="M2 10h3l2-6 4 12 2-6h5"/></svg>;
+    case 'layers':    return <svg {...p}><path d="M10 3l7 4-7 4-7-4 7-4z"/><path d="M3 11l7 4 7-4"/><path d="M3 15l7 4 7-4"/></svg>;
+    case 'cable':     return <svg {...p}><path d="M5 14a3 3 0 0 0 0-6V4M15 6a3 3 0 0 0 0 6v4"/><circle cx="5" cy="3" r="1"/><circle cx="15" cy="17" r="1"/></svg>;
+    case 'gauge':     return <svg {...p}><path d="M3 14a7 7 0 0 1 14 0"/><path d="M10 14l4-3"/><circle cx="10" cy="14" r="0.8" fill="currentColor"/></svg>;
     default:         return null;
   }
 }
 
-function NavGroup({ item, pathname }) {
-  const inside = pathname.startsWith(item.href);
-  // Auto-open when any child route is active; allow manual toggle otherwise.
+function NavGroup({ item, pathname, accent }) {
+  // For runtime, "inside" means pathname is exactly the parent OR starts
+  // with a child href. The parent href is also a real page (Overview), so
+  // we match on the parent itself too.
+  const inside = pathname === item.href || pathname.startsWith(item.href + '/');
   const [open, setOpen] = useState(inside);
   useEffect(() => { if (inside) setOpen(true); }, [inside]);
 
-  const parentActive = inside; // highlight parent whenever we're anywhere inside
+  const activeCls = accent?.active || 'bg-primary/10 text-primary';
 
   return (
     <div>
-      {/* Parent row — acts as a disclosure button. Still navigates on explicit click of the label area via Enter? Keep it as a button; the first click opens, second click on the highlighted parent does nothing useful. Simpler: button toggles, separate arrow icon for visual cue, and children carry navigation. */}
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
         className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] transition-colors ${
-          parentActive
-            ? 'bg-primary/10 text-primary font-medium'
-            : 'text-foreground/80 hover:bg-muted hover:text-foreground'
+          inside ? `${activeCls} font-medium` : 'text-foreground/80 hover:bg-muted hover:text-foreground'
         }`}
       >
         <Icon name={item.icon} />
         <span className="flex-1 text-left truncate">{item.label}</span>
-        <svg
-          width="10" height="10" viewBox="0 0 12 12" fill="currentColor"
-          className={`text-muted-foreground transition-transform shrink-0 ${open ? 'rotate-90' : ''}`}
-          aria-hidden
-        >
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"
+             className={`text-muted-foreground transition-transform shrink-0 ${open ? 'rotate-90' : ''}`}>
           <path d="M4 2l5 4-5 4V2z"/>
         </svg>
       </button>
-
       {open && (
         <ul className="mt-0.5 ml-4 pl-3 border-l border-border/70 space-y-0.5">
           {item.children.map(c => {
@@ -103,9 +152,8 @@ function NavGroup({ item, pathname }) {
                 <Link
                   href={c.href}
                   className={`block px-2.5 py-1.5 rounded-md text-[12.5px] transition-colors ${
-                    active
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    active ? `${activeCls} font-medium`
+                           : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   }`}
                 >
                   {c.label}
@@ -119,15 +167,53 @@ function NavGroup({ item, pathname }) {
   );
 }
 
+/* Mode-tinted accent so each mode reads distinct without a full theme swap. */
+const MODE_ACCENT = {
+  build:  { active: 'bg-primary/10 text-primary',         tab: 'border-primary/40 bg-primary/10 text-primary' },
+  govern: { active: 'bg-destructive/10 text-destructive', tab: 'border-destructive/40 bg-destructive/10 text-destructive' },
+  suites: { active: 'bg-accent/15 text-accent',           tab: 'border-accent/50 bg-accent/15 text-accent' },
+};
+
 export default function AppSidebar({ collapsed, onToggle }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const { list, current, currentId, switchTo, create, rename, remove } = useWorkspaces(user?.workspace);
-  // Live count of open approval tasks. Drives the sidebar badge so people
-  // know there's work waiting for them without having to navigate away.
   const pendingApprovals = usePendingCount(t => t.status === 'pending' || t.status === 'claimed');
 
+  // Mode is path-derived by default. The user's last manual mode click is
+  // remembered until they navigate into a different mode's root, at which
+  // point we snap to that mode.
+  const pathMode = modeFromPath(pathname);
+  const [stickyMode, setStickyMode] = useState(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setStickyMode(window.localStorage.getItem(MODE_KEY) || null);
+  }, []);
+  // Snap sticky to path when pathname enters a different mode's territory.
+  useEffect(() => {
+    if (!stickyMode || stickyMode === pathMode) return;
+    setStickyMode(pathMode);
+    try { window.localStorage.setItem(MODE_KEY, pathMode); } catch {}
+  }, [pathMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mode = stickyMode || pathMode;
+
+  const setMode = (id) => {
+    setStickyMode(id);
+    try { window.localStorage.setItem(MODE_KEY, id); } catch {}
+  };
+
+  const accent = MODE_ACCENT[mode] || MODE_ACCENT.build;
+
   const isActive = (href) => href === '/app' ? pathname === '/app' : pathname.startsWith(href);
+
+  /* The list rendered under "Mode → items". Build keeps the long list as
+     before; Govern shows its 4 routes; Suites shows the 4 SKUs (locked +
+     enabled). Settings + Home pinned at top in the build mode only. */
+  const navItems = useMemo(() => {
+    if (mode === 'govern') return GOVERN_NAV;
+    if (mode === 'suites') return SUITES_NAV;
+    return BUILD_NAV;
+  }, [mode]);
 
   if (collapsed) {
     return (
@@ -135,35 +221,46 @@ export default function AppSidebar({ collapsed, onToggle }) {
         <button onClick={onToggle} className="h-8 w-8 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted" title="Expand sidebar">
           <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor"><path d="M4 2l5 4-5 4V2z"/></svg>
         </button>
-        <div className="mt-3 mb-1 h-px w-8 bg-border" />
-        <nav className="flex-1 flex flex-col gap-1 items-center mt-2">
-          {NAV.map(n => (
-            <Link key={n.href} href={n.href} title={n.label}
-              className={`relative h-9 w-9 rounded flex items-center justify-center transition-colors ${
-                isActive(n.href) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-              }`}>
-              <Icon name={n.icon} />
-              {n.icon === 'approvals' && pendingApprovals > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-mono font-medium tabular-nums flex items-center justify-center">
-                  {pendingApprovals}
-                </span>
-              )}
-            </Link>
+
+        {/* Mode dots — three circles, one per mode, active mode filled. */}
+        <div className="mt-3 flex flex-col gap-1.5">
+          {MODES.map(m => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setMode(m.id)}
+              title={m.label}
+              className={`h-2 w-2 rounded-full transition-all ${
+                m.id === mode
+                  ? (m.id === 'govern' ? 'bg-destructive scale-125' :
+                     m.id === 'suites' ? 'bg-accent scale-125' :
+                                          'bg-primary scale-125')
+                  : 'bg-border hover:bg-muted-foreground'
+              }`}
+            />
           ))}
-          <div className="my-2 h-px w-8 bg-border" />
-          {SUITES.map(s => (
-            s.enabled ? (
-              <Link key={s.href} href={s.href} title={s.label}
-                className={`h-9 w-9 rounded flex items-center justify-center transition-colors ${
-                  isActive(s.href) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}>
-                <Icon name={s.icon} />
-              </Link>
-            ) : (
-              <span key={s.href} title={`${s.label} · coming soon`}
+        </div>
+
+        <div className="mt-3 mb-1 h-px w-8 bg-border" />
+        <nav className="flex-1 flex flex-col gap-1 items-center mt-2 overflow-y-auto">
+          {navItems.map(n => (
+            n.enabled === false ? (
+              <span key={n.href} title={`${n.label} · soon`}
                 className="h-9 w-9 rounded flex items-center justify-center text-muted-foreground/40 cursor-not-allowed">
-                <Icon name={s.icon} />
+                <Icon name={n.icon} />
               </span>
+            ) : (
+              <Link key={n.href} href={n.href} title={n.label}
+                className={`relative h-9 w-9 rounded flex items-center justify-center transition-colors ${
+                  isActive(n.href) ? accent.active : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}>
+                <Icon name={n.icon} />
+                {n.icon === 'approvals' && pendingApprovals > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-mono font-medium tabular-nums flex items-center justify-center">
+                    {pendingApprovals}
+                  </span>
+                )}
+              </Link>
             )
           ))}
         </nav>
@@ -188,8 +285,35 @@ export default function AppSidebar({ collapsed, onToggle }) {
         </button>
       </div>
 
-      {/* Workspace chip — opens switcher dropdown */}
+      {/* Mode switcher — three-segment control. The active mode's accent
+          color also tints the active nav row below. */}
       <div className="px-3 pt-3 pb-2">
+        <div role="tablist" aria-label="Mode" className="grid grid-cols-3 gap-1 p-0.5 rounded-md border border-border bg-card">
+          {MODES.map(m => {
+            const active = m.id === mode;
+            const tint = active
+              ? (m.id === 'govern' ? 'bg-destructive/10 text-destructive border-destructive/40' :
+                 m.id === 'suites' ? 'bg-accent/15 text-accent border-accent/50' :
+                                       'bg-primary/10 text-primary border-primary/40')
+              : 'text-muted-foreground border-transparent hover:text-foreground';
+            return (
+              <button
+                key={m.id}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setMode(m.id)}
+                title={m.hint}
+                className={`px-2 py-1 rounded text-[11px] font-medium border transition-colors ${tint}`}
+              >
+                {m.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Workspace chip */}
+      <div className="px-3 pb-2">
         <WorkspaceSwitcher
           list={list}
           currentId={currentId}
@@ -200,17 +324,28 @@ export default function AppSidebar({ collapsed, onToggle }) {
         />
       </div>
 
-      {/* Nav */}
+      {/* Mode nav */}
       <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
-        <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-mono">Build</div>
-        {NAV.filter(n => n.href !== '/app/settings').map(n =>
-          n.children ? (
-            <NavGroup key={n.href} item={n} pathname={pathname} />
+        <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-mono">
+          {mode === 'govern' ? 'Control plane' : mode === 'suites' ? 'Suites' : 'Build'}
+        </div>
+
+        {navItems.map(n => (
+          n.enabled === false ? (
+            <div key={n.href}
+              className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] text-muted-foreground/55 cursor-not-allowed"
+              title="Coming soon">
+              <Icon name={n.icon} />
+              <span className="flex-1 truncate">{n.label}</span>
+              <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded border border-border text-muted-foreground/70">soon</span>
+            </div>
+          ) : n.children ? (
+            <NavGroup key={n.href} item={n} pathname={pathname} accent={accent} />
           ) : (
             <Link key={n.href} href={n.href}
               className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] transition-colors ${
                 isActive(n.href)
-                  ? 'bg-primary/10 text-primary font-medium'
+                  ? `${accent.active} font-medium`
                   : 'text-foreground/80 hover:bg-muted hover:text-foreground'
               }`}>
               <Icon name={n.icon} />
@@ -227,35 +362,10 @@ export default function AppSidebar({ collapsed, onToggle }) {
               )}
             </Link>
           )
-        )}
-
-        <div className="px-2 pt-4 pb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-mono">Suites</div>
-        {SUITES.map(s =>
-          s.enabled ? (
-            <Link key={s.href} href={s.href}
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] transition-colors ${
-                isActive(s.href)
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-foreground/80 hover:bg-muted hover:text-foreground'
-              }`}>
-              <Icon name={s.icon} />
-              <span className="flex-1 truncate">{s.label}</span>
-            </Link>
-          ) : (
-            <div key={s.href}
-              className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] text-muted-foreground/55 cursor-not-allowed"
-              title="Coming soon">
-              <Icon name={s.icon} />
-              <span className="flex-1 truncate">{s.label}</span>
-              <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded border border-border text-muted-foreground/70">soon</span>
-            </div>
-          )
-        )}
+        ))}
 
         <div className="px-2 pt-4 pb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-mono">Account</div>
-        {NAV.filter(n => n.href === '/app/settings').map(n => (
-          <NavGroup key={n.href} item={n} pathname={pathname} />
-        ))}
+        <NavGroup item={SETTINGS} pathname={pathname} />
       </nav>
 
       {/* Workspace status footer */}

@@ -108,7 +108,7 @@ function CorporaCard({ tool }) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="outline" render={
+          <Button size="sm" variant="outline" render={
             <Link href="/app/knowledge"><ExternalLink className="h-3.5 w-3.5" /> Manage sources</Link>
           } />
           <Button size="sm" onClick={() => setPickerOpen(true)} disabled={available.length === 0}>
@@ -462,7 +462,7 @@ function GraphIndexCard({ tool }) {
         <span className="text-muted-foreground">
           Last built: {g.lastBuiltAt ? new Date(g.lastBuiltAt).toLocaleString() : '—'}
         </span>
-        <Button asChild size="sm" variant="outline" render={
+        <Button size="sm" variant="outline" render={
           <Link href="/app/knowledge"><GitBranch className="h-3.5 w-3.5" /> Rebuild graph</Link>
         } />
       </div>

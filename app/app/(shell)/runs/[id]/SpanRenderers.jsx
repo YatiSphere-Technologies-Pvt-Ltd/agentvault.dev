@@ -36,6 +36,88 @@ export function IOView({ span, which /* 'input' | 'output' */, currentMs }) {
 
 /* ========== LLM ========== */
 
+/* LLMChatView — the threaded conversation for an LLM span.
+   Combines `input.system`, `input.messages`, and `output.{text,tool_calls}`
+   into one chronological view. The assistant bubble streams in based on
+   replay progress so it feels like the live model talking. This is the
+   default tab for LLM spans because for agentic traces, the "what did the
+   model see and what did it say?" question dominates triage. */
+export function LLMChatView({ span, currentMs }) {
+  const system   = span.input?.system;
+  const messages = span.input?.messages || [];
+  const text     = span.output?.text || '';
+  const toolCalls = span.output?.tool_calls || [];
+  const { pct, state } = progressOf(span, currentMs);
+  const chars = Math.max(0, Math.min(text.length, Math.floor(text.length * pct)));
+  const displayed = pct >= 1 ? text : text.slice(0, chars);
+  const stillTyping = state === 'running';
+  const tokensTotal = Number(span.attrs?.['gen_ai.usage.output_tokens'] || 0);
+  const tokensLive = pct >= 1 ? tokensTotal : Math.floor(tokensTotal * pct);
+
+  return (
+    <div className="space-y-2.5">
+      <ModelBadges span={span} right={
+        <span className="text-[10.5px] font-mono text-muted-foreground tabular-nums">
+          {tokensLive.toLocaleString()} / {tokensTotal.toLocaleString()} out tok
+        </span>
+      } />
+
+      {/* Threaded conversation */}
+      <div className="space-y-1.5">
+        {system && <Bubble role="system" content={system} />}
+        {messages.map((m, i) => (
+          <Bubble
+            key={`in-${i}`}
+            role={m.role}
+            content={typeof m.content === 'string' ? m.content : JSON.stringify(m.content, null, 2)}
+          />
+        ))}
+        {state !== 'pending' && (
+          <Bubble
+            role="assistant"
+            content={
+              <>
+                {displayed || (stillTyping ? '' : <span className="italic text-muted-foreground">(no text returned)</span>)}
+                {stillTyping && (
+                  <span className="inline-block w-[2px] h-[1em] bg-primary ml-0.5 align-text-bottom animate-pulse" />
+                )}
+              </>
+            }
+          />
+        )}
+        {toolCalls.length > 0 && state !== 'pending' && (
+          <div className="ml-8 space-y-1.5">
+            {toolCalls.map((tc, i) => (
+              <div key={i} className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-[12px] font-mono inline-flex items-center gap-1 max-w-full">
+                <span className="text-[9.5px] uppercase tracking-[0.14em] text-muted-foreground mr-1">tool_use</span>
+                <span className="text-primary">{tc.name}</span>
+                <span className="text-muted-foreground">(</span>
+                <span className="text-foreground truncate">
+                  {tc.arguments && Object.keys(tc.arguments).length ? JSON.stringify(tc.arguments) : ''}
+                </span>
+                <span className="text-muted-foreground">)</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer — finish_reason + cost. The single-line stat that closes
+          the conversation. */}
+      {state === 'done' && (
+        <div className="flex items-center justify-between gap-2 px-1 pt-1 text-[10.5px] font-mono text-muted-foreground border-t border-border/60">
+          <span>
+            finish: <span className="text-foreground">{span.attrs?.['gen_ai.response.finish_reason'] || 'end_turn'}</span>
+          </span>
+          <span>
+            cost: <span className="text-foreground tabular-nums">${Number(span.attrs?.['gen_ai.response.cost_usd'] || 0).toFixed(5)}</span>
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LLMInputView({ span }) {
   const messages = span.input?.messages || [];
   const system   = span.input?.system;

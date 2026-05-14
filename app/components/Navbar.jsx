@@ -7,6 +7,7 @@ import VaultMark from "./VaultMark";
 
 const NAV = [
   { label: "Platform",   href: "/platform" },
+  { label: "Govern",     href: "/govern" },
   { label: "Solutions",  href: "/solutions" },
   { label: "Developers", href: "/developers" },
   { label: "Pricing",    href: "/pricing" },

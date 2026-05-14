@@ -144,3 +144,106 @@ export function fmtMs(ms) {
   if (ms < 1000) return `${Math.round(ms)} ms`;
   return `${(ms / 1000).toFixed(2)} s`;
 }
+
+/* Critical path
+   ─────────────
+   For agentic traces the most useful "where did the time go?" answer is
+   the longest root-to-leaf path through the span tree. The bars on that
+   path are what an operator should look at first when triaging slow runs.
+
+   We compute it by recursing down: for each node, the path through it is
+   its own duration plus the maximum of its children's paths. Returns a
+   Set of span ids on the chosen path plus the total ms it accounts for.
+
+   Note: spans here are nested but have explicit start/end times — sibling
+   spans can overlap. We treat the path as the *sequential* longest chain,
+   which matches how humans read the waterfall (parents wrap their kids,
+   the slowest leaf chain is the offender). */
+export function computeCriticalPath(spans) {
+  const childrenBy = new Map();
+  for (const s of spans) {
+    if (!childrenBy.has(s.parentId)) childrenBy.set(s.parentId, []);
+    childrenBy.get(s.parentId).push(s);
+  }
+  const memo = new Map(); // spanId → { dur, ids: [...] }
+  const walk = (id) => {
+    if (memo.has(id)) return memo.get(id);
+    const s = spans.find(x => x.id === id);
+    if (!s) return { dur: 0, ids: [] };
+    const kids = childrenBy.get(id) || [];
+    let bestDur = 0;
+    let bestIds = [];
+    for (const k of kids) {
+      const sub = walk(k.id);
+      if (sub.dur > bestDur) { bestDur = sub.dur; bestIds = sub.ids; }
+    }
+    const out = { dur: s.durMs + bestDur, ids: [s.id, ...bestIds] };
+    memo.set(id, out);
+    return out;
+  };
+  const root = spans.find(s => s.parentId == null);
+  if (!root) return { ids: new Set(), totalMs: 0 };
+  const { dur, ids } = walk(root.id);
+  return { ids: new Set(ids), totalMs: dur };
+}
+
+/* Spread a list of policy gates evenly across the run timeline so they can
+   be drawn as dots above the waterfall. Real gates from the EVALUATIONS
+   store don't carry timestamps, so we anchor them to the spans whose hook
+   matches (input/output/tool/run/etc) and fall back to a uniform spread. */
+export function placeGatesOnTimeline(gates, spans, totalDurMs) {
+  if (!gates?.length) return [];
+  const HOOK_TO_KIND = {
+    'input':  'agent',
+    'output': 'guardrail',
+    'tool':   'tool',
+    'pre-run':  'agent',
+    'post-run': 'guardrail',
+    'pre-tool':  'tool',
+    'post-tool': 'tool',
+    'pre-model': 'llm',
+    'post-model': 'llm',
+  };
+  const out = [];
+  for (let i = 0; i < gates.length; i++) {
+    const g = gates[i];
+    const kind = HOOK_TO_KIND[g.hook] || null;
+    const candidate = kind ? spans.find(s => s.kind === kind && s.parentId != null) : null;
+    let atMs;
+    if (candidate) {
+      atMs = candidate.startMs + Math.min(candidate.durMs, 80);
+    } else {
+      // Spread evenly across the run, leaving a small margin at each end.
+      atMs = (totalDurMs * (i + 1)) / (gates.length + 1);
+    }
+    out.push({ ...g, atMs: Math.max(0, Math.min(totalDurMs, atMs)) });
+  }
+  return out;
+}
+
+/* Build a token-density series for the trace, sampled into N buckets.
+   Each LLM span contributes its total tokens, distributed uniformly across
+   the time it occupied. Other spans contribute 0. Returns an array of
+   { ms, tokens } points the waterfall draws as a small density bar. */
+export function tokenDensity(spans, totalDurMs, buckets = 60) {
+  const series = new Array(buckets).fill(0);
+  if (!totalDurMs) return series.map((tokens, i) => ({ ms: 0, tokens }));
+  const stepMs = totalDurMs / buckets;
+  for (const s of spans) {
+    if (s.kind !== 'llm') continue;
+    const tokens = Number(s.attrs?.['gen_ai.usage.total_tokens'] || 0);
+    if (!tokens) continue;
+    const startB = Math.max(0, Math.floor(s.startMs / stepMs));
+    const endB   = Math.min(buckets - 1, Math.floor((s.startMs + s.durMs) / stepMs));
+    const span = Math.max(1, endB - startB + 1);
+    const per  = tokens / span;
+    for (let i = startB; i <= endB; i++) series[i] += per;
+  }
+  const max = Math.max(...series, 1);
+  return series.map((tokens, i) => ({ ms: i * stepMs, tokens, norm: tokens / max }));
+}
+
+/* Order errors chronologically — used by "next error" hotkey + chip. */
+export function listErrors(spans) {
+  return spans.filter(s => s.status === 'error').sort((a, b) => a.startMs - b.startMs);
+}

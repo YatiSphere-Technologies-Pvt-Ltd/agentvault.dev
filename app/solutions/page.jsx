@@ -6,7 +6,7 @@ import { SOLUTIONS } from "../components/solutions/data";
 
 export const metadata = {
   title: "Solutions — AgentVault",
-  description: "Prebuilt enterprise suites: GRC, KYC Intelligence, Workforce, Context Engine.",
+  description: "Prebuilt enterprise suites: Govern, GRC, KYC Intelligence, Workforce, Context Engine.",
 };
 
 export default function SolutionsPage() {
@@ -28,7 +28,7 @@ export default function SolutionsPage() {
           <div className="relative max-w-7xl mx-auto px-6 lg:px-10">
             <Eyebrow label="Solutions" />
             <h1 className="mt-5 text-[40px] lg:text-[52px] leading-[1.05] font-semibold tracking-tight text-foreground max-w-200">
-              Four enterprise suites.<br />
+              Five enterprise suites.<br />
               <span className="text-primary">Built on the same vault.</span>
             </h1>
             <p className="mt-5 text-[15px] lg:text-[16px] leading-relaxed text-muted-foreground max-w-150">

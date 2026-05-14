@@ -579,6 +579,116 @@ export const CONTROLS = [
     runs7d: 0,
     violations7d: 6,
   },
+
+  /* ─── Shadow AI domain controls (runtime / gateway hooks) ───
+     These fire on the AI gateway, not the agent loop. Each is bound to a
+     DLP rule by the runtime store. The `domain: 'shadow-ai'` tag lets the
+     UI partition them from agent-domain controls when needed. */
+  {
+    id: 'av.dlp.credentials',
+    title: 'Block credentials at AI egress',
+    family: 'Shadow AI',
+    domain: 'shadow-ai',
+    kind: 'preventive',
+    hook: 'prompt.intercept',
+    enforcement: 'block',
+    summary:
+      'API keys, AWS credentials, JWTs, and private-key blocks are blocked at the AI gateway before they reach any external model. Detection is regex-based with high-confidence thresholds.',
+    inputs: ['prompt.text', 'attached.files', 'asset.destination'],
+    coverage: 0.94,
+    runs7d: 14_212,
+    violations7d: 14,
+  },
+  {
+    id: 'av.dlp.pii',
+    title: 'Redact customer PII at AI egress',
+    family: 'Shadow AI',
+    domain: 'shadow-ai',
+    kind: 'preventive',
+    hook: 'prompt.intercept',
+    enforcement: 'redact',
+    summary:
+      'Email, phone, SSN, IBAN, and credit-card spans are masked before the prompt is forwarded. The user sees a banner; the redacted prompt is logged for audit.',
+    inputs: ['prompt.text', 'user.identity'],
+    coverage: 0.91,
+    runs7d: 18_400,
+    violations7d: 42,
+  },
+  {
+    id: 'av.dlp.code',
+    title: 'Source-code egress to unapproved AI',
+    family: 'Shadow AI',
+    domain: 'shadow-ai',
+    kind: 'preventive',
+    hook: 'prompt.intercept',
+    enforcement: 'block',
+    summary:
+      'Heuristic code-content detection blocks source-code blocks from being sent to non-approved external AI assets. Approved Copilot / IDE seats are exempt.',
+    inputs: ['prompt.text', 'asset.approval_state'],
+    coverage: 0.88,
+    runs7d: 8_120,
+    violations7d: 18,
+  },
+  {
+    id: 'av.dlp.legal',
+    title: 'Warn on contract / legal content',
+    family: 'Shadow AI',
+    domain: 'shadow-ai',
+    kind: 'detective',
+    hook: 'prompt.intercept',
+    enforcement: 'warn',
+    summary:
+      'Contracts, NDAs, and legal language trigger a confirmation banner. The user must explicitly confirm before the prompt is forwarded.',
+    inputs: ['prompt.text'],
+    coverage: 0.74,
+    runs7d: 2_240,
+    violations7d: 8,
+  },
+  {
+    id: 'av.dlp.prompt-injection',
+    title: 'Detect prompt-injection attempts',
+    family: 'Shadow AI',
+    domain: 'shadow-ai',
+    kind: 'detective',
+    hook: 'prompt.intercept',
+    enforcement: 'warn',
+    summary:
+      'Known bypass phrases ("ignore previous instructions", "DAN mode", etc.) are flagged for security review. Inbound assistant responses are also scanned for system-prompt leakage.',
+    inputs: ['prompt.text', 'response.text'],
+    coverage: 0.81,
+    runs7d: 412,
+    violations7d: 3,
+  },
+  {
+    id: 'av.dlp.phi',
+    title: 'Block PHI at AI egress (HIPAA)',
+    family: 'Shadow AI',
+    domain: 'shadow-ai',
+    kind: 'preventive',
+    hook: 'prompt.intercept',
+    enforcement: 'block',
+    summary:
+      'Patient identifiers, ICD-10 codes, and PHI keywords trigger a hard block. Required for HIPAA-regulated workspaces; configurable per department.',
+    inputs: ['prompt.text', 'workspace.regulated_class'],
+    coverage: 0.92,
+    runs7d: 1_240,
+    violations7d: 0,
+  },
+  {
+    id: 'av.dlp.strategy',
+    title: 'Log strategy-class business content',
+    family: 'Shadow AI',
+    domain: 'shadow-ai',
+    kind: 'detective',
+    hook: 'prompt.intercept',
+    enforcement: 'log',
+    summary:
+      'Board decks, roadmap commits, and GTM plans are logged for audit but not blocked. Provides visibility into strategic-content exposure without blocking productive work.',
+    inputs: ['prompt.text'],
+    coverage: 0.62,
+    runs7d: 1_840,
+    violations7d: 24,
+  },
 ];
 
 // Many-to-many. One control discharges multiple framework clauses — that's the
@@ -989,14 +1099,35 @@ export function decisionTone(decision) {
 
 export function hookLabel(hook) {
   return {
-    'pre-run':    'Pre-run',
-    'pre-tool':   'Pre-tool',
-    'pre-model':  'Pre-model',
-    'post-model': 'Post-model',
-    'post-run':   'Post-run',
-    'scheduled':  'Scheduled',
+    // Per-run hooks (existing — fire during AgentVault agent execution)
+    'pre-run':           'Pre-run',
+    'pre-tool':          'Pre-tool',
+    'pre-model':         'Pre-model',
+    'post-model':        'Post-model',
+    'post-run':          'Post-run',
+    'scheduled':         'Scheduled',
+    // Runtime hooks (new — fire at the AI gateway, not the agent loop)
+    'prompt.intercept':  'Prompt intercept',
+    'response.intercept':'Response intercept',
+    'egress.classify':   'Egress classify',
+    'discovery.detect':  'Discovery detect',
   }[hook] || hook;
 }
+
+/* Subject types a policy can bind to.
+   The original engine assumed every policy targets an agent. Shadow-AI
+   policies need to target broader entities — an entire department's
+   traffic, a single SaaS vendor, an end-user, an asset, or an asset class.
+   The runtime hooks above evaluate against these subjects at the gateway. */
+export const SUBJECT_TYPES = {
+  agent:      { label: 'Agent',      hint: 'AgentVault-managed agent' },
+  tool:       { label: 'Tool',       hint: 'Registered tool / MCP server' },
+  workspace:  { label: 'Workspace',  hint: 'Entire workspace' },
+  asset:      { label: 'AI asset',   hint: 'Inventory record — internal or external' },
+  department: { label: 'Department', hint: 'Org chart bucket — e.g. Finance' },
+  vendor:     { label: 'Vendor',     hint: 'AI vendor — OpenAI, Anthropic, etc.' },
+  user:       { label: 'User',       hint: 'Individual employee identity' },
+};
 
 // Coverage stats per framework — clauses with ≥1 mapped control / total clauses.
 export function coverageFor(frameworkSlug) {

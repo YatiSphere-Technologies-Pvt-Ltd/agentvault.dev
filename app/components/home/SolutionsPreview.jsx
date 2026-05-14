@@ -3,6 +3,15 @@ import { Eyebrow } from "./PlatformPillars";
 
 const SOLUTIONS = [
   {
+    slug: "govern",
+    name: "AgentVault Govern",
+    tagline: "Discover Shadow AI. Enforce policy. Prove safety.",
+    summary: "Discover every AI tool your org uses, enforce DLP at the gateway, red-team agents continuously, and ship signed audit evidence — one control plane, end to end.",
+    stat: "12+ frameworks pre-mapped",
+    accent: "#0891B2",
+    tag: "AI governance",
+  },
+  {
     slug: "grc",
     name: "AgentVault GRC Suite",
     tagline: "Continuous controls, evidence on demand.",
@@ -17,7 +26,7 @@ const SOLUTIONS = [
     tagline: "Identity + risk, scored in seconds.",
     summary: "Multi-source identity verification, sanctions & PEP screening, beneficial-ownership chain resolution, and analyst-in-the-loop review queues.",
     stat: "3.2× faster onboarding",
-    accent: "#0891B2",
+    accent: "#7C3AED",
     tag: "Financial services",
   },
   {
@@ -35,7 +44,7 @@ const SOLUTIONS = [
     tagline: "Your data, agent-ready.",
     summary: "Managed RAG on top of your warehouse, lakehouse, and doc stores — with row-level permissions, freshness SLAs, and a unified context API.",
     stat: "< 120 ms p50 retrieval",
-    accent: "#7C3AED",
+    accent: "#6366F1",
     tag: "Data platform",
   },
 ];
@@ -47,7 +56,7 @@ export default function SolutionsPreview() {
         <Eyebrow label="The solutions" />
         <div className="mt-3 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <h2 className="text-[32px] lg:text-[40px] leading-[1.1] font-semibold tracking-tight text-foreground max-w-180">
-            Four enterprise suites, built on the same vault.
+            Five enterprise suites, built on the same vault.
           </h2>
           <Link href="/solutions" className="text-[13px] text-primary hover:brightness-110 font-medium">
             See all solutions →
